@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "700218829957",
+    "firebase_url": "https://gru-watch-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "gru-watch",
+    "storage_bucket": "gru-watch.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:700218829957:android:30eff19dba630d4c2e8dec",
+        "android_client_info": {
+          "package_name": "com.example.myapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADTe2ArYxy8guB7_2AmbhoqWgg1e8T3Dw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
