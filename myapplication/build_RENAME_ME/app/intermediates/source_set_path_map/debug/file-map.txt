@@ -1,0 +1,44 @@
+com.example.frontend.app-jetified-datastore-release-0 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\07aaecfd7bc6bd0163e7fe5838741149\transformed\jetified-datastore-release\res
+com.example.frontend.app-jetified-activity-ktx-1.8.1-1 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\0c33dfbec9e14149961f7e12dea56499\transformed\jetified-activity-ktx-1.8.1\res
+com.example.frontend.app-lifecycle-viewmodel-2.7.0-2 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\0e737f9981a0bdcaa00b03c1d10c1ce5\transformed\lifecycle-viewmodel-2.7.0\res
+com.example.frontend.app-jetified-lifecycle-livedata-core-ktx-2.7.0-3 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\130c357e905ca429f52cb45b56b3f077\transformed\jetified-lifecycle-livedata-core-ktx-2.7.0\res
+com.example.frontend.app-jetified-datastore-preferences-release-4 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\14fa4c9f3c3393dd433824756fecfc52\transformed\jetified-datastore-preferences-release\res
+com.example.frontend.app-jetified-savedstate-1.2.1-5 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\1dddf53a8caee16de15864669d32f7fb\transformed\jetified-savedstate-1.2.1\res
+com.example.frontend.app-jetified-profileinstaller-1.3.1-6 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\22edfe82bd28c063dbeb2dce131e9324\transformed\jetified-profileinstaller-1.3.1\res
+com.example.frontend.app-jetified-annotation-experimental-1.4.0-7 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\24a58e6849885d9c8b876e09d060556a\transformed\jetified-annotation-experimental-1.4.0\res
+com.example.frontend.app-jetified-datastore-core-release-8 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\2dbda46d843445fca10ceaf63764c0fb\transformed\jetified-datastore-core-release\res
+com.example.frontend.app-preference-1.2.1-9 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\3534fd59df84a34cd4f580e473d199ea\transformed\preference-1.2.1\res
+com.example.frontend.app-jetified-savedstate-ktx-1.2.1-10 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\45628e6479b24212d17a8a629df3d19d\transformed\jetified-savedstate-ktx-1.2.1\res
+com.example.frontend.app-core-runtime-2.2.0-11 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\49664c2aa7487387804a45ceb4f20c54\transformed\core-runtime-2.2.0\res
+com.example.frontend.app-lifecycle-livedata-2.7.0-12 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\4b79b6d85c84ad5265e55cf5180dcde5\transformed\lifecycle-livedata-2.7.0\res
+com.example.frontend.app-transition-1.4.1-13 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\4e42f980765cedd35cbf3a641a41d171\transformed\transition-1.4.1\res
+com.example.frontend.app-lifecycle-runtime-2.7.0-14 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\516b9f035837e8db15a1ffb6f554e9fd\transformed\lifecycle-runtime-2.7.0\res
+com.example.frontend.app-jetified-lifecycle-viewmodel-savedstate-2.7.0-15 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\70c30d44c63af65d757682a35286f028\transformed\jetified-lifecycle-viewmodel-savedstate-2.7.0\res
+com.example.frontend.app-jetified-appcompat-resources-1.1.0-16 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\76dab0f1f747a8fff27343ccdacbc95b\transformed\jetified-appcompat-resources-1.1.0\res
+com.example.frontend.app-jetified-core-ktx-1.13.1-17 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\7cecf90e73cf62142438e7c4850860cc\transformed\jetified-core-ktx-1.13.1\res
+com.example.frontend.app-jetified-lifecycle-process-2.7.0-18 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\7e3c8c44d57efa01a780e3906e664239\transformed\jetified-lifecycle-process-2.7.0\res
+com.example.frontend.app-jetified-lifecycle-runtime-ktx-2.7.0-19 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\83876b49f1f0dc82a846e39d11c2cf06\transformed\jetified-lifecycle-runtime-ktx-2.7.0\res
+com.example.frontend.app-recyclerview-1.0.0-20 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\85413d2ae53618b94f10a3067a0f5f30\transformed\recyclerview-1.0.0\res
+com.example.frontend.app-slidingpanelayout-1.2.0-21 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\8fa81f6a41fc21b044d7bbcfb78ee5bd\transformed\slidingpanelayout-1.2.0\res
+com.example.frontend.app-jetified-core-1.0.0-22 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\9056bf6575f32c40deab1c2276ed2f72\transformed\jetified-core-1.0.0\res
+com.example.frontend.app-coordinatorlayout-1.0.0-23 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\94d4e3da0325495cf92da1e1713c45e6\transformed\coordinatorlayout-1.0.0\res
+com.example.frontend.app-jetified-tracing-1.2.0-24 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\9f2da267f226517adad0e6467914f847\transformed\jetified-tracing-1.2.0\res
+com.example.frontend.app-jetified-fragment-ktx-1.7.1-25 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\a3412de082a13d6cb0fa4e1c53e19f9d\transformed\jetified-fragment-ktx-1.7.1\res
+com.example.frontend.app-jetified-activity-1.8.1-26 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\bd36965a7af5f1b2f12da7f0fdf93c87\transformed\jetified-activity-1.8.1\res
+com.example.frontend.app-core-1.13.1-27 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\c006fe8f224859b228248be33bea444b\transformed\core-1.13.1\res
+com.example.frontend.app-lifecycle-livedata-core-2.7.0-28 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\c47dd622703e44552aaa239b77b72218\transformed\lifecycle-livedata-core-2.7.0\res
+com.example.frontend.app-jetified-window-java-1.2.0-29 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\ca75596d2ee386f5bff38d3be26b4e88\transformed\jetified-window-java-1.2.0\res
+com.example.frontend.app-fragment-1.7.1-30 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\df233ee1c2c2547c0d42c9fbf7140704\transformed\fragment-1.7.1\res
+com.example.frontend.app-appcompat-1.1.0-31 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\e36394da9a92ce39b784723816b37ccf\transformed\appcompat-1.1.0\res
+com.example.frontend.app-jetified-window-1.2.0-32 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\ea620a13789ccb49c3bf62a5024cd21c\transformed\jetified-window-1.2.0\res
+com.example.frontend.app-jetified-startup-runtime-1.1.1-33 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\f354f113a3235ea66b915f2ead9c8afc\transformed\jetified-startup-runtime-1.1.1\res
+com.example.frontend.app-jetified-lifecycle-viewmodel-ktx-2.7.0-34 C:\Users\WINDOWS 11\.gradle\caches\transforms-3\f5746fa9f195d50a91c0351cd386bb20\transformed\jetified-lifecycle-viewmodel-ktx-2.7.0\res
+com.example.frontend.app-debug-35 F:\DATA_E\code\smartApp\frontend\android\app\src\debug\res
+com.example.frontend.app-main-36 F:\DATA_E\code\smartApp\frontend\android\app\src\main\res
+com.example.frontend.app-pngs-37 F:\DATA_E\code\smartApp\frontend\build\app\generated\res\pngs\debug
+com.example.frontend.app-resValues-38 F:\DATA_E\code\smartApp\frontend\build\app\generated\res\resValues\debug
+com.example.frontend.app-packageDebugResources-39 F:\DATA_E\code\smartApp\frontend\build\app\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.example.frontend.app-packageDebugResources-40 F:\DATA_E\code\smartApp\frontend\build\app\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.example.frontend.app-merged_res-41 F:\DATA_E\code\smartApp\frontend\build\app\intermediates\merged_res\debug
+com.example.frontend.app-packaged_res-42 F:\DATA_E\code\smartApp\frontend\build\flutter_blue_plus_android\intermediates\packaged_res\debug
+com.example.frontend.app-packaged_res-43 F:\DATA_E\code\smartApp\frontend\build\shared_preferences_android\intermediates\packaged_res\debug
