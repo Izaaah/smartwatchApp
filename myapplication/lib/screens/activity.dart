@@ -1,5 +1,9 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'dart:async';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ActivityScreen extends StatelessWidget {
   const ActivityScreen({super.key});
@@ -18,7 +22,7 @@ class ActivityScreen extends StatelessWidget {
               const SizedBox(height: 24),
               _buildTodaySummary(),
               const SizedBox(height: 24),
-              _buildActivityTypes(),
+              _buildActivityTypes(context),
               const SizedBox(height: 24),
               _buildTodayActivities(),
             ],
@@ -36,7 +40,7 @@ class ActivityScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Activity',
+              'Stats',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.6),
                 fontSize: 14,
@@ -216,7 +220,7 @@ class ActivityScreen extends StatelessWidget {
   //   );
   // }
 
-Widget _buildActivityTypes() {
+Widget _buildActivityTypes(BuildContext context) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -254,7 +258,7 @@ Widget _buildActivityTypes() {
             Icons.self_improvement,
             const Color(0xFFFFD93D),
             () {
-              print('Meditation Clicked');
+              _showMeditationDialog(context);
             },
           ),
           // Kartu 3
@@ -264,7 +268,7 @@ Widget _buildActivityTypes() {
             Icons.psychology,
             const Color(0xFFFF6B6B),
             () {
-              print('Scan Clicked');
+              print('Focus Clicked');
             },
           ),
           // Kartu 4
@@ -273,9 +277,7 @@ Widget _buildActivityTypes() {
             'Productivity',
             Icons.timer,
             const Color(0xFF6C5CE7),
-            () {
-              print('Focus Clicked');
-            },
+            () => _startRecording(context, 'Focus'),
           ),
         ],
       ),
@@ -337,8 +339,8 @@ Widget _buildActivityTypes() {
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
@@ -381,6 +383,176 @@ Widget _buildActivityTypes() {
     );
   }
 
+// Ubah fungsi ini di activity.dart
+void _startRecording(BuildContext context, String type) {
+  if (type == 'Focus') {
+    _showPomodoroDialog(context); // Kirim context ke fungsi dialog
+  } else if (type == 'Meditation'){
+    _showMeditationDialog(context);
+  } else {
+    print("Memulai sesi: $type");
+  }
+}
+
+void _showPomodoroDialog(BuildContext context) {
+  int totalSeconds = 1500; // 25 Menit
+  Timer? timer;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          
+          void startTimer() {
+            if (timer != null) return;
+            timer = Timer.periodic(const Duration(seconds: 1), (t) {
+              if (totalSeconds > 0) {
+                setState(() => totalSeconds--);
+              } else {
+                t.cancel();
+              }
+            });
+          }
+
+          String formatTime(int s) {
+            return "${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}";
+          }
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A1F3A),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: const Text("Pomodoro Focus", style: TextStyle(color: Colors.white)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  formatTime(totalSeconds),
+                  style: const TextStyle(color: Color(0xFF6C5CE7), fontSize: 48, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Text("Stay focused to lower your stress.", 
+                    style: TextStyle(color: Colors.white60), textAlign: TextAlign.center),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  timer?.cancel();
+                  Navigator.pop(context);
+                },
+                child: const Text("Stop", style: TextStyle(color: Colors.redAccent)),
+              ),
+              if (timer == null)
+                ElevatedButton(
+                  onPressed: startTimer,
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6C5CE7)),
+                  child: const Text("Start Now"),
+                ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
+void _showMeditationDialog(BuildContext context){
+  int elapsedSeconds = 0;
+  Timer? timer;
+  int? _hrBefore = await getHRFromLocal(hashCode);
+  int? _hrAfter;
+  final player = AudioPlayer();
+
+  // _hrBefore = _watchHeartRate;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState){
+
+          void startMeditation() async {
+            if (timer != null) return;
+
+            try {
+              await player.play(AssetSource('audio/meditation.mp3'));
+              player.setReleaseMode(ReleaseMode.loop);
+            } catch (e) {
+              print ("Error playing audio: $e");
+            }
+
+            timer = Timer.periodic(const Duration(seconds: 1), (t) {
+              setState(() => elapsedSeconds++);
+            });
+          }
+
+          void endMeditation() async {
+            int currentHR = await fetchCurrentHR();
+            await saveHRToLocal(currentHR);
+
+            setState(() {
+              _hrAfter = currentHR;
+            });
+          }
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A1F3A),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: const Text("Meditation Session", style: TextStyle(color: Colors.white)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.spa, color: Color(0xFFFFD93D), size: 64),
+                const SizedBox(height: 16),
+                Text(
+                  "${(elapsedSeconds ~/ 60).toString().padLeft(2, '0')}:${(elapsedSeconds % 60).toString().padLeft(2, '0')}",
+                  style: const TextStyle(color: Colors.white, fontSize: 54, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: (){
+                  timer?.cancel();
+                  player.stop();
+                  player.dispose();
+                  Navigator.pop(context);
+                }, 
+                child: const Text("End Session", style: TextStyle(color: Colors.redAccent)),
+              ),
+              if (timer == null)
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFD93D)),
+                  onPressed: startMeditation,
+                  child: const Text("Start Now", style: TextStyle(color: Colors.black87)),
+                  ),
+            ],
+          );
+        },
+      );
+      },
+      );
+    }
+// }
+  
+  Future<void> saveHRToLocal(int hrValue) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('last_hr', hrValue);
+  }
+
+  Future<int> getHRFromLocal() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('last_hr') ?? 0;
+  }
+
+  // Future<int> fetchCurrentHR() async {
+  //   try {
+  //     final snapshot = await Fire
+  //   }
+  // }
   Widget _buildTodayActivities() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
