@@ -1,5 +1,6 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
@@ -76,7 +77,29 @@ class ActivityScreen extends StatelessWidget {
   }
 
   Widget _buildTodaySummary() {
-    return Container(
+    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .snapshots(),
+      builder: (context, snapshot) {
+        String steps = '0';
+        String distance = '0.0 km';
+        String calories = '0';
+
+        if (snapshot.hasData && snapshot.data!.exists) {
+          var data = snapshot.data!.data() as Map<String, dynamic>;
+          steps = data['steps']?.toString() ?? '0';
+
+          double distValue = (data['distance'] ?? 0.0) / 1000;
+          distance = "${distValue.toStringAsFixed(1)} km";
+
+          calories = data['calories']?.toString() ?? '0';
+        }
+
+        return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -105,21 +128,21 @@ class ActivityScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildSummaryItem(
-                  '8,234',
+                  steps,
                   'Steps',
                   Icons.directions_walk,
                 ),
               ),
               Expanded(
                 child: _buildSummaryItem(
-                  '2.4 km',
+                  distance,
                   'Distance',
                   Icons.straighten,
                 ),
               ),
               Expanded(
                 child: _buildSummaryItem(
-                  '234',
+                  calories,
                   'Calories',
                   Icons.local_fire_department,
                 ),
@@ -129,6 +152,9 @@ class ActivityScreen extends StatelessWidget {
         ],
       ),
     );
+      },
+    );
+    
   }
 
   Widget _buildSummaryItem(String value, String label, IconData icon) {
