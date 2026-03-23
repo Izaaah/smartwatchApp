@@ -2,6 +2,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
@@ -434,11 +435,22 @@ void _showAffirmationDialog(BuildContext context) {
                 backgroundColor: Colors.redAccent,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(12))
               ),
-              onPressed: () {
-                final duration = _controller.value.position.inMinutes;
-                print("Sesi selesai dalam $duration menit");
+              onPressed: () async {
+                // final duration = _controller.value.position.inMinutes;
+                final int watchedSeconds = _controller.value.position.inSeconds;
+                // print("Sesi selesai dalam $duration menit");
+                final String durationText = watchedSeconds >= 60
+                  ? "${watchedSeconds ~/ 60} min"
+                  : "${watchedSeconds} sec";
+                
+                await _saveActivityToFirestore(
+                  'Daily Affirmation',
+                  'Watched for $durationText',
+                  Icons.auto_awesome
+                );
 
                 _controller.pause();
+                _controller.dispose();
                 Navigator.pop(context);
               },
               child: const Text("End Session & Save Progress"),
@@ -507,7 +519,13 @@ void _startBreathingExercise(BuildContext context, int totalSeconds) {
             void finishSession() async {
             timer?.cancel();
             int currentHR = await fetchCurrentHR();
-            await saveHRToLocal(currentHR);
+            // await saveHRToLocal(currentHR);
+
+            await _saveActivityToFirestore(
+              'Breathing Session',
+              '${totalSeconds ~/ 60} min • $currentHR BPM',
+              Icons.air
+            );
 
             setState((){
               hrAfter = currentHR;
@@ -637,8 +655,19 @@ void _showPomodoroDialog(BuildContext context) {
             ),
             actions: [
               TextButton(
-                onPressed: () {
+                onPressed: () async {
                   timer?.cancel();
+
+                  int focusDurationSeconds = 1500 - totalSeconds;
+                  String focusMinutes = (focusDurationSeconds ~/ 60).toString();
+
+                  if (focusDurationSeconds > 10) {
+                    await _saveActivityToFirestore(
+                      'Focus Session',
+                      '$focusMinutes min focused',
+                      Icons.timer
+                    );
+                  }
                   Navigator.pop(context);
                 },
                 child: const Text("Stop", style: TextStyle(color: Colors.redAccent)),
@@ -690,10 +719,15 @@ void _showMeditationDialog(BuildContext context){
 
           void endMeditation() async {
             timer?.cancel();
-            await player.stop();
+            // await player.stop();
             
             int currentHR = await fetchCurrentHR();
             await saveHRToLocal(currentHR);
+            
+            await _saveActivityToFirestore(
+              'Meditation Session', 
+              '${elapsedSeconds ~/ 60} min • $currentHR BPM', 
+              Icons.self_improvement);
 
             setState(() {
               _hrAfter = currentHR;
@@ -763,10 +797,19 @@ void _showMeditationDialog(BuildContext context){
       }
   }
 
-  // Future<void> saveHRToLocal(int hrValue) async {
-  //   final SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   await prefs.setInt('last_hr', hrValue);
-  // }
+  Future<void> _saveActivityToFirestore(String title, String details, IconData icon) async {
+    try {
+      await FirebaseFirestore.instance.collection('recent_activities').add({
+        'title': title,
+        'time': DateTime.now(),
+        'details': details,
+        'icon_code': icon.codePoint,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print("Error saving activity: $e");
+    }
+  }
   Widget _buildTodayActivities() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -780,28 +823,43 @@ void _showMeditationDialog(BuildContext context){
           ),
         ),
         const SizedBox(height: 16),
-        _buildActivityItem(
-          'Morning Run',
-          '09:00 AM',
-          '6.2 km • 45 min',
-          Icons.directions_run,
-          const Color(0xFF4ECDC4),
-        ),
-        const SizedBox(height: 12),
-        _buildActivityItem(
-          'Cycling Session',
-          '11:30 AM',
-          '12.8 km • 30 min',
-          Icons.directions_bike,
-          const Color(0xFF9B59B6),
-        ),
-        const SizedBox(height: 12),
-        _buildActivityItem(
-          'Lunch Walk',
-          '01:00 PM',
-          '2.5 km • 35 min',
-          Icons.directions_walk,
-          const Color(0xFF3498DB),
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+            .collection('recent_activities')
+            .orderBy('timestamp', descending: true)
+            .limit(5)
+            .snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+            return ListView.separated(
+              shrinkWrap: true, 
+              physics: const NeverScrollableScrollPhysics(), 
+              itemCount: snapshot.data!.docs.length,
+              separatorBuilder: (context, index) => SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                var data = snapshot.data!.docs[index];
+
+                Color activityColor;
+                if (data['title'].contains('Breathing')){
+                  activityColor = const Color(0xFF4ECDC4);
+                } else if (data['title'].contains('Meditation')) {
+                  activityColor = const Color(0xFFFFD93D);
+                } else if (data['title'].contains('Focus')){
+                  activityColor = const Color(0xFF6C5CE7);
+                } else {
+                  activityColor = const Color(0xFFF39C12);
+                }
+                return _buildActivityItem(
+                  data['title'],
+                  DateFormat('h:mm a').format(data['time'].toDate()),
+                  data['details'],
+                  IconData(data['icon_code'], fontFamily: 'MaterialIcons'),
+                  activityColor,
+                );
+              },
+            );
+          },
         ),
       ],
     );
