@@ -25,6 +25,8 @@ dependencies:
   flutter_launcher_icons: ^0.13.1
   tflite_flutter: ^0.12.1
   flutter_foreground_task: ^6.1.0
+  audioplayers: ^5.2.1
+  youtube_player_flutter: ^9.1.1
 
 dev_dependencies:
   flutter_test:
@@ -47,3 +49,4 @@ flutter:
     - assets/images/
     - assets/model_emotion_lite.tflite
     - assets/scaler_params.json
+    - assets/audio/meditation.mp3

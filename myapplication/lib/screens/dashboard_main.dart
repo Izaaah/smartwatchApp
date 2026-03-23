@@ -97,7 +97,7 @@ class _DashboardMainState extends State<DashboardMain> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.fitness_center),
-            label: 'Activity',
+            label: 'Stats',
           ),
           // BottomNavigationBarItem(
           //   icon: Icon(Icons.analytics),
@@ -146,6 +146,7 @@ bool _isWatchConnected = false;
   int _phoneBaseSteps = -1;
   int _phoneStepsToday = 0;   // Hasil: Sensor HP - Base HP
   int _watchStepsToday = 0;   // Langsung dari smartwatch
+  int _lastSavedHR = 0;
   // int _phoneBaseSteps = -1;
   final User? user = FirebaseAuth.instance.currentUser;
   late Stream<StepCount> _stepCountStream;
@@ -789,133 +790,171 @@ void _showStressDialog(String label) {
   );
 }
 
-  Widget _buildHeartRateCard() {
-    final heartRate = _latestHealthData?.hr ?? 0.0;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFFFF6B6B),
-            const Color(0xFFFF8E8E),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
+Widget _buildHeartRateCard() {
+  return Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          const Color(0xFFFF6B6B),
+          const Color(0xFFFF8E8E),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Heart Rate',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+      borderRadius: BorderRadius.circular(24),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // HEADER
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Heart Rate',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.circle,
+                    color: _isWatchConnected
+                        ? Colors.greenAccent
+                        : Colors.red,
+                    size: 8,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _isWatchConnected ? 'Watch Live' : 'Live',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // STREAM BUILDER (HANYA 1)
+        StreamBuilder(
+          stream: FirebaseDatabase.instance.ref('health_metrics').onValue,
+          builder: (context, snapshot) {
+            int displayHR = _lastSavedHR;
+
+            if (snapshot.hasData &&
+                snapshot.data!.snapshot.value != null) {
+              try {
+                final data = Map<dynamic, dynamic>.from(
+                    snapshot.data!.snapshot.value as Map);
+
+                int currentHR = data['heart_rate'] ?? 0;
+
+                if (currentHR > 0) {
+                  _lastSavedHR = currentHR;
+                  displayHR = currentHR;
+                }
+              } catch (e) {
+                print("Error parsing HR: $e");
+              }
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // HEART RATE TEXT
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Icon(Icons.circle, color: _isWatchConnected ? Colors.greenAccent : Colors.red, size: 8),
-                    SizedBox(width: 4),
                     Text(
-                      _isWatchConnected ? 'Watch Live' : 'Live',
-                      style: TextStyle(
+                      _watchHeartRate <= 0 
+                        ? '--' 
+                        : _watchHeartRate.toStringAsFixed(0),
+                      style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8, left: 4),
+                      child: Text(
+                        'bpm',
+                        style: TextStyle(
+                            color: Colors.white70, fontSize: 14),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                _watchHeartRate > 0 
-                  ? _watchHeartRate.toStringAsFixed(0) 
-                  : (_latestHealthData?.hr?.toStringAsFixed(0) ?? '0'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    height: 1,
-                  ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8, left: 4),
-                child: Text(
-                  'bpm',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: StreamBuilder<DocumentSnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(FirebaseAuth.instance.currentUser?.uid)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    double waterIntake = 0.0;
-                    if (snapshot.hasData && snapshot.data!.exists) {
-                      var data = snapshot.data!.data() as Map<String, dynamic>;
-                      // Pastikan nama field 'waterIntake' sama dengan di Firestore
-                      waterIntake = (data['waterIntake'] ?? 0.0).toDouble();
-                    }
 
-                    // InkWell diletakkan DI SINI (di dalam builder)
-                    return InkWell(
-                      onTap: () => _showAddWaterDialog(context),
-                      borderRadius: BorderRadius.circular(12),
-                      child: _buildMiniStat(
-                        'Water',
-                        '${waterIntake.toStringAsFixed(1)}L',
-                        Icons.water_drop,
+                const SizedBox(height: 16),
+
+                // MINI STATS
+                Row(
+                  children: [
+                    Expanded(
+                      child: StreamBuilder<DocumentSnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(FirebaseAuth.instance.currentUser?.uid)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          double waterIntake = 0.0;
+
+                          if (snapshot.hasData &&
+                              snapshot.data!.exists) {
+                            var data = snapshot.data!.data()
+                                as Map<String, dynamic>;
+                            waterIntake =
+                                (data['waterIntake'] ?? 0.0).toDouble();
+                          }
+
+                          return InkWell(
+                            onTap: () =>
+                                _showAddWaterDialog(context),
+                            borderRadius: BorderRadius.circular(12),
+                            child: _buildMiniStat(
+                              'Water',
+                              '${waterIntake.toStringAsFixed(1)}L',
+                              Icons.water_drop,
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildMiniStat(
+                        'Active Time',
+                        '${_currentSleep.toStringAsFixed(1)}h',
+                        Icons.access_time,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildMiniStat(
-                  'Active Time',
-                  // '7',
-                  '${_currentSleep.toStringAsFixed(1)}h',
-                  // '${(_latestHealthData?.sleepHours ?? _todayStats?.avgSleepHours ?? 0).toStringAsFixed(1)}h',
-                  Icons.access_time,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
+              ],
+            );
+          },
+        ),
+      ],
+    ),
+  );
+}
   Widget _buildMiniStat(String label, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(12),

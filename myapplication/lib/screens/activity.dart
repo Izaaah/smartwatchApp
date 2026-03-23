@@ -1,9 +1,10 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'dart:async';
-
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class ActivityScreen extends StatelessWidget {
   const ActivityScreen({super.key});
@@ -247,9 +248,7 @@ Widget _buildActivityTypes(BuildContext context) {
             'Deep & Slow',          // 2. Subtitle
             Icons.air,              // 3. Icon
             const Color(0xFF4ECDC4),// 4. Color
-            () {                    // 5. onTap (Fungsi Klik)
-              print('Breathing Clicked');
-            },
+            () => _showBreathingSelectionDialog(context),
           ),
           // Kartu 2
           _buildActivityTypeCard(
@@ -263,12 +262,12 @@ Widget _buildActivityTypes(BuildContext context) {
           ),
           // Kartu 3
           _buildActivityTypeCard(
-            'Stress Scan',
-            'AI Diagnosis',
-            Icons.psychology,
-            const Color(0xFFFF6B6B),
+            'Daily Affirmation',
+            'Positive Vibes',
+            Icons.auto_awesome_motion,
+            const Color(0xFFF39C12),
             () {
-              print('Focus Clicked');
+              _showAffirmationDialog(context);
             },
           ),
           // Kartu 4
@@ -394,6 +393,206 @@ void _startRecording(BuildContext context, String type) {
   }
 }
 
+void _showAffirmationDialog(BuildContext context) {
+  final String videoId = YoutubePlayer.convertUrlToId("https://youtu.be/I_Ds-e63cIE?si=wfxiP8Cy0aHy-MHG")!;
+
+  YoutubePlayerController _controller = YoutubePlayerController(
+    initialVideoId: videoId,
+    flags: const YoutubePlayerFlags(
+      autoPlay: true,
+      mute: false,
+    ),
+  );
+
+  showDialog(context: context,
+  barrierDismissible: false,
+  builder: (context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF1A1F3A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text("Daily Affirmation",
+            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: YoutubePlayer(
+              controller: _controller,
+              showVideoProgressIndicator: true,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(12))
+              ),
+              onPressed: () {
+                final duration = _controller.value.position.inMinutes;
+                print("Sesi selesai dalam $duration menit");
+
+                _controller.pause();
+                Navigator.pop(context);
+              },
+              child: const Text("End Session & Save Progress"),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  );
+}
+
+void _showBreathingSelectionDialog(BuildContext context) {
+  showDialog(
+    context: context, 
+    builder: (context) {
+      return AlertDialog(
+        backgroundColor: const Color(0xFF1A1F3A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text("Breathing Session", style: TextStyle(color: Colors.white)),
+        content: const Text("Pilih durasi yang nyaman untuk Anda hari ini",
+          style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _startBreathingExercise(context, 120);
+            },
+            child: const Text("2 Menit", style: TextStyle(color: Color(0xFF4ECDC4))),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _startBreathingExercise(context, 180);
+            },
+            child: const Text("3 Menit", style: TextStyle(color: Color(0xFF4ECDC4))),
+          ),
+        ],
+      );
+    },
+    );
+}
+
+void _startBreathingExercise(BuildContext context, int totalSeconds) {
+  int remainingSeconds = totalSeconds;
+  Timer? timer;
+  String instruction = "Siapkan Diri...";
+  int? hrBefore;
+  int? hrAfter;
+  bool isInhale = true;
+  bool isStarted = false;
+
+  showDialog(
+    context: context, 
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          void startSession() async {
+            int currentHR = await fetchCurrentHR();
+            setState((){
+              hrBefore = currentHR;
+              isStarted = true;
+              instruction = "Tarik Napas...";
+            });
+
+            void finishSession() async {
+            timer?.cancel();
+            int currentHR = await fetchCurrentHR();
+            await saveHRToLocal(currentHR);
+
+            setState((){
+              hrAfter = currentHR;
+              instruction = "Sesi Selesai";
+            });
+
+            timer = Timer.periodic(const Duration(seconds: 1), (t) {
+              if (remainingSeconds > 0) {
+                setState(() {
+                  remainingSeconds--;
+                  if (remainingSeconds % 5 == 0) {
+                    isInhale = !isInhale;
+                    instruction = isInhale ? "Tarik Napas..." : "Hembuskan...";
+                  }
+                });
+              } else {
+                t.cancel();
+                finishSession();
+              }
+            });
+          }
+          }
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF0A0E27),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(instruction,
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+
+                AnimatedContainer(
+                  duration: const Duration(seconds: 5),
+                  padding: EdgeInsets.all(isInhale && isStarted ? 60 : 20),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF4ECDC4).withOpacity(isInhale ? 0.3 : 0.1),
+                    border: Border.all(color: const Color(0xFF4ECDC4), width: 2)
+                  ),
+                  child: const Icon(Icons.air, size: 50, color: Colors.white),
+                ),
+
+                const SizedBox(height: 25),
+                Text(
+                  "${(remainingSeconds ~/ 60).toString().padLeft(2, '0')}:${(remainingSeconds % 60).toString().padLeft(2, '0')}",
+                  style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold),
+                ),
+
+                if (hrBefore != null) ...[
+                  const SizedBox(height: 10),
+                  Text("HR Awal: $hrBefore BPM", style: const TextStyle(color: Colors.white60)),
+                ],
+                if (hrAfter != null) ...[
+                  Text("HR Akhir: $hrAfter BPM", style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                ],
+              ],
+            ),
+
+            actions: [
+              if (!isStarted)
+                Center(
+                  child: ElevatedButton(
+                    onPressed: startSession,
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4ECDC4)),
+                    child: const Text("Mulai Sesi", style: TextStyle(color: Colors.black)),
+                  ),
+                )
+              else
+                TextButton(
+                  onPressed: () {
+                    timer?.cancel();
+                    Navigator.pop(context);
+                  },
+                  child: Text(hrAfter != null ? "Tutup" : "Berhenti", style: const TextStyle(color: Colors.redAccent)),
+                ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
 void _showPomodoroDialog(BuildContext context) {
   int totalSeconds = 1500; // 25 Menit
   Timer? timer;
@@ -461,7 +660,7 @@ void _showPomodoroDialog(BuildContext context) {
 void _showMeditationDialog(BuildContext context){
   int elapsedSeconds = 0;
   Timer? timer;
-  int? _hrBefore = await getHRFromLocal(hashCode);
+  int? _hrBefore;
   int? _hrAfter;
   final player = AudioPlayer();
 
@@ -490,6 +689,9 @@ void _showMeditationDialog(BuildContext context){
           }
 
           void endMeditation() async {
+            timer?.cancel();
+            await player.stop();
+            
             int currentHR = await fetchCurrentHR();
             await saveHRToLocal(currentHR);
 
@@ -548,10 +750,22 @@ void _showMeditationDialog(BuildContext context){
     return prefs.getInt('last_hr') ?? 0;
   }
 
-  // Future<int> fetchCurrentHR() async {
-  //   try {
-  //     final snapshot = await Fire
-  //   }
+  Future<int> fetchCurrentHR() async {
+      try {
+        final snapshot = await FirebaseDatabase.instance.ref("health_metrics/heart_rate").get();
+        if (snapshot.exists) {
+          return (snapshot.value as num).toInt();
+        }
+        return 0;
+      } catch (e) {
+        print("Error fetch HR: $e");
+        return 0;
+      }
+  }
+
+  // Future<void> saveHRToLocal(int hrValue) async {
+  //   final SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   await prefs.setInt('last_hr', hrValue);
   // }
   Widget _buildTodayActivities() {
     return Column(
