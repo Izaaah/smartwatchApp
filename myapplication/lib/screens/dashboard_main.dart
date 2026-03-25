@@ -343,13 +343,16 @@ void _initStepTracking() async {
 
   // --- GABUNGKAN & SIMPAN ---
   void _updateTotalAndSync() {
-    int total = _phoneStepsDay + _watchStepsDay;
-    _stepsDisplay = total.toString();
+    int totalSteps = _phoneStepsDay + _watchStepsDay;
+    _stepsDisplay = totalSteps.toString();
+    double distanceKm = totalSteps * 0.000762;
 
     // Kirim ke Firestore agar ProfileScreen ikut update
     if (_uid != null) {
       FirebaseFirestore.instance.collection('users').doc(_uid).set({
-        'totalSteps': total,
+        'steps': totalSteps,
+        'distance' : distanceKm,
+        'calories' : _totalCaloriesBurned,
         'lastUpdate': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     }

@@ -86,17 +86,18 @@ class ActivityScreen extends StatelessWidget {
         .snapshots(),
       builder: (context, snapshot) {
         String steps = '0';
-        String distance = '0.0 km';
+        String distance= '0.0 km';
         String calories = '0';
 
         if (snapshot.hasData && snapshot.data!.exists) {
           var data = snapshot.data!.data() as Map<String, dynamic>;
           steps = data['steps']?.toString() ?? '0';
 
-          double distValue = (data['distance'] ?? 0.0) / 1000;
-          distance = "${distValue.toStringAsFixed(1)} km";
+          double distValue = (data['distance'] ?? 0.0).toDouble();
+          distance = "${distValue.toStringAsFixed(2)} km";
 
-          calories = data['calories']?.toString() ?? '0';
+          double calValue = (data['calories'] ?? 0.0).toDouble();
+          calories = calValue.toStringAsFixed(0);
         }
 
         return Container(
@@ -878,7 +879,11 @@ void _showMeditationDialog(BuildContext context){
                 }
                 return _buildActivityItem(
                   data['title'],
-                  DateFormat('h:mm a').format(data['time'].toDate()),
+                  DateFormat('h:mm a').format(
+                    data['time'] != null
+                    ? (data['time'] as Timestamp).toDate()
+                    : DateTime.now()
+                  ),
                   data['details'],
                   IconData(data['icon_code'], fontFamily: 'MaterialIcons'),
                   activityColor,

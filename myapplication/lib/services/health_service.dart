@@ -1,88 +1,86 @@
 import 'package:health/health.dart';
-import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class HealthService {
+class HealthConnectService {
   final Health health = Health();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  final types = [
+  final List<HealthDataType> types = [
     HealthDataType.STEPS,
-    HealthDataType.HEART_RATE,
     HealthDataType.BLOOD_OXYGEN,
     HealthDataType.BASAL_ENERGY_BURNED,
     HealthDataType.ACTIVE_ENERGY_BURNED,
     HealthDataType.SLEEP_SESSION,
+    HealthDataType.DISTANCE_DELTA,
   ];
 
-  Future<bool> requestPermissions() async {
-    try {
-      await health.installHealthConnect();
-      return await health.requestAuthorization(types);
-    } catch (e) {
-      debugPrint("Izin Gagal: $e");
-      return false;
-    }
-  }
+  Future<void> syncHealthData() async {
+    final String? uid = _auth.currentUser?.uid;
+    if (uid == null) return;
 
-  Future<Map<String, dynamic>> fetchTodayData() async {
-    final now = DateTime.now();
-    final midnight = DateTime(now.year, now.month, now.day);
-    final yesterday = now.subtract(const Duration(hours: 48));
+    health.configure();
+
+    bool requested = await health.requestAuthorization(types);
+    if (!requested) return;
 
     try {
-      List<HealthDataPoint> dataPoints = await health.getHealthDataFromTypes(
-        startTime: yesterday,
-        endTime: now,
+      final now = DateTime.now();
+      final midnight = DateTime(now.year, now.month, now.day);
+
+      int? steps = await health.getTotalStepsInInterval(midnight, now);
+
+      List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(
         types: types,
+        startTime: midnight.subtract(const Duration(days: 1)),
+        endTime: now,
       );
 
-      int stepsToday = 0;
-      double caloriesToday = 0;
-      double lastOxygen = 0;
-      double sleepMinutes = 0; // Pastikan variabel ini ada di sini
-      double lastHr = 0;
+      double activeCalories = 0;
+      double basalCalories = 0;
+      double distance = 0;
+      double bloodOxygen = 0;
+      double sleepHours = 0;
 
-      for (var point in dataPoints) { // Kita beri nama 'point'
-        bool isToday = point.dateFrom.isAfter(midnight);
-
-        switch (point.type) {
-          case HealthDataType.STEPS:
-            if (isToday) stepsToday += int.parse(point.value.toString());
-            break;
-            
+      for (var p in healthData){
+        switch (p.type) {
           case HealthDataType.ACTIVE_ENERGY_BURNED:
+            activeCalories += double.parse(p.value.toString());
+            break;
           case HealthDataType.BASAL_ENERGY_BURNED:
-            if (isToday) caloriesToday += double.parse(point.value.toString());
+            basalCalories += double.parse(p.value.toString());
             break;
-
+          case HealthDataType.DISTANCE_DELTA:
+            distance += double.parse(p.value.toString());
+            break;
           case HealthDataType.BLOOD_OXYGEN:
-            double oxValue = double.parse(point.value.toString());
-            lastOxygen = oxValue < 1.0 ? oxValue * 100 : oxValue;
+            distance = double.parse(p.value.toString());
             break;
-
           case HealthDataType.SLEEP_SESSION:
-            // Perbaikan error 'p': gunakan 'point' sesuai nama variabel di atas
-            final duration = point.dateTo.difference(point.dateFrom).inMinutes;
-            sleepMinutes += duration.toDouble();
+            if (p.dateFrom != null && p.dateTo != null) {
+              sleepHours += p.dateTo.difference(p.dateFrom).inMinutes / 60;
+            }
             break;
-
-          case HealthDataType.HEART_RATE:
-            if (isToday) lastHr = double.parse(point.value.toString());
+          default:
             break;
-            
-          default: break;
         }
       }
 
-      return {
-        'steps': stepsToday,
-        'calories': caloriesToday,
-        'heartRate': lastHr,
-        'oxygen': lastOxygen,
-        'sleep': sleepMinutes / 60, // Menghasilkan jam
-      };
+      await _firestore.collection('users').doc(uid).set({
+        'steps': steps ?? 0,
+        'distance': distance / 1000,
+        'calories': activeCalories,
+        'basal_calories': basalCalories,
+        'total_calories': activeCalories + basalCalories,
+        'blood_oxygen': bloodOxygen,
+        'sleep_hours': sleepHours,
+        'lastUpdate': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      print("✅ Health Connect Synced: Steps: $steps, Sleep: ${sleepHours.toStringAsFixed(1)}h");
     } catch (e) {
-      debugPrint("Error Fetch: $e");
-      return {'steps': 0, 'calories': 0, 'heartRate': 0, 'oxygen': 0, 'sleep': 0};
+      print("❌ Error Sync Health Data: $e");
     }
   }
 }
