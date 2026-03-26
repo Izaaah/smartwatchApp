@@ -16,6 +16,76 @@ class HealthConnectService {
     HealthDataType.DISTANCE_DELTA,
   ];
 
+  Future<bool> requestPermissions() async {
+    health.configure();
+
+    bool? hasPermission = await health.hasPermissions(types);
+
+    if (hasPermission == null || !hasPermission) {
+      try {
+        bool requested = await health.requestAuthorization(types);
+        return requested;
+      } catch (e) {
+        print("error requesting health permission: $e");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<Map<String, dynamic>> fetchTodayData() async {
+    // final String? uid = _auth.currentUser?.uid;
+
+    bool authorized = await requestPermissions();
+    if (!authorized) return {'steps': 0, 'sleep': 0.0, 'oxygen': 0.0};
+
+    try {
+      final now = DateTime.now();
+      final midnight = DateTime(now.year, now.month, now.day);
+
+      int totalSteps = 0;
+      try {
+        int? aggregateSteps = await health.getTotalStepsInInterval(midnight, now);
+        totalSteps = aggregateSteps ?? 0;
+      } catch (e) {
+        print("gagal ambil agregat steps");
+      }
+
+      List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(
+        types: types, 
+        startTime: midnight, 
+        endTime: now,);
+      
+      double sleepHours = 0;
+      double bloodOxygen = 0;
+
+      for (var p in healthData) {
+        if (p.type == HealthDataType.SLEEP_SESSION) {
+          sleepHours += p.dateTo.difference(p.dateFrom).inMinutes/60;
+        } else if (p.type == HealthDataType.BLOOD_OXYGEN){
+          bloodOxygen = double.tryParse(p.value.toString()) ?? 0;
+        } else if (p.type == HealthDataType.STEPS && totalSteps == 0) {
+          totalSteps += (double.tryParse(p.value.toString()) ?? 0).toInt();
+        }
+      }
+
+      print("Debug Fetch: Steps: $totalSteps, sleep: $sleepHours, Oxygen: $bloodOxygen");
+
+      print("RAW STEPS DATA: $totalSteps");
+print("RAW SLEEP DATA: $sleepHours");
+print("RAW OXYGEN DATA: $bloodOxygen");
+
+      return {
+        'steps': totalSteps,
+        'sleep': sleepHours,
+        'oxygen': bloodOxygen,
+      };
+    } catch (e) {
+      print("❌ Error Fetching Data: $e");
+      return {'steps': 0, 'sleep': 0.0, 'oxygen': 0.0};
+    }
+  }
+  
   Future<void> syncHealthData() async {
     final String? uid = _auth.currentUser?.uid;
     if (uid == null) return;

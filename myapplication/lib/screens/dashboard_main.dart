@@ -1,18 +1,16 @@
 import 'dart:async';
-
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/screens/profile.dart';
 import 'package:frontend/screens/activity.dart';
-// import 'package:frontend/screens/stats.dart';
 import 'package:frontend/screens/notifications_screen.dart';
 import 'package:frontend/models/health_data.dart';
 import 'package:frontend/models/notification.dart' as app_models;
 import 'package:frontend/services/health_service.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/WearOsService.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:pedometer/pedometer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math' as math;
@@ -31,14 +29,6 @@ class _DashboardMainState extends State<DashboardMain> {
   
   final GlobalKey<_DashboardContentState> _dashboardKey =
       GlobalKey<_DashboardContentState>();
-
-  // List<Widget> get _screens => [
-  //       DashboardContent(key: _dashboardKey),
-  //       const ActivityScreen(),
-  //       // const StatsScreen(),
-  //       const ProfileScreen(),
-  //     ];
-  
   late List<Widget> _screens;
 
   @override
@@ -54,7 +44,6 @@ class _DashboardMainState extends State<DashboardMain> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 2. GANTI INI: Gunakan IndexedStack agar semua halaman tetap "hidup" di memori
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,
@@ -80,10 +69,6 @@ class _DashboardMainState extends State<DashboardMain> {
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
-            // Refresh dashboard when switching back to it
-            // if (index == 0 && _dashboardKey.currentState != null) {
-            //   _dashboardKey.currentState!.loadData();
-            // }
           });
         },
         backgroundColor: const Color(0xFF0F1429),
@@ -126,7 +111,7 @@ class _DashboardContentState extends State<DashboardContent> with AutomaticKeepA
   bool get wantKeepAlive => true;
 
   HealthData? _latestHealthData;
-  final HealthService _healthService = HealthService();
+  final HealthConnectService _healthService = HealthConnectService();
   int _currentSteps = 0;
   double _currentOxygen = 0;
   double _currentSleep = 0;
@@ -135,27 +120,17 @@ class _DashboardContentState extends State<DashboardContent> with AutomaticKeepA
   double _watchHeartRate = 0;
 double _accelX = 0;
 bool _isWatchConnected = false;
-  // dynamic _todayStats;
   bool _isLoading = true;
-  // String? _error;
-  // User? _user;
   int _notificationCount = 0;
-  String _stepsDisplay = "0";     
-  int _phoneStepsDay = 0;         
-  int _watchStepsDay = 0;         
-  int _phoneBaseSteps = -1;
-  int _phoneStepsToday = 0;   // Hasil: Sensor HP - Base HP
-  int _watchStepsToday = 0;   // Langsung dari smartwatch
+  String _stepsDisplay = "0"; 
   int _lastSavedHR = 0;
-  // int _phoneBaseSteps = -1;
   final User? user = FirebaseAuth.instance.currentUser;
-  late Stream<StepCount> _stepCountStream;
+  // late Stream<StepCount> _stepCountStream;
   final String? _uid = FirebaseAuth.instance.currentUser?.uid;
 
-  // StreamSubscription? _bleSubcription;
-  StreamSubscription<StepCount>? _stepSubscription;
-  StreamSubscription<StepCount>? _pedometerSubscription;
-  int _stepsAtStartOfSession = 0; // Angka dari Health Connect saat app dibuka
+  // StreamSubscription<StepCount>? _stepSubscription;
+  // StreamSubscription<StepCount>? _pedometerSubscription;
+  // int _stepsAtStartOfSession = 0; // Angka dari Health Connect saat app dibuka
   int _pedometerBase = 0;
   double _totalCaloriesBurned = 0.0;
 DateTime? _lastUpdateTime;
@@ -165,18 +140,20 @@ DateTime? _lastUpdateTime;
 void initState() {
   super.initState();
   
-  // 1. Inisialisasi Hardware & Sensor Dasar
   _initApp(); 
-  _initPedometerHP();
-  _initStepTracking();
+  // _initPedometerHP();
+  // _initStepTracking();
+  // _initHealthConnect();
 
-  // 2. Jalankan Listener Utama WearOsService
-  // Ini adalah jantung aplikasi: Mengolah UI, Firebase, dan mentrigger AI
+  Timer.periodic(const Duration(minutes: 10), (timer){
+    _healthService.syncHealthData();
+    _initApp();
+  });
+
   WearOsService().sensorStream.listen((data) {
     if (mounted) {
       final now = DateTime.now();
       
-      // Ambil data mentah untuk UI
       double currentHR = data['hr'] ?? 0.0;
       double ax = data['ax'] ?? 0.0;
       double ay = data['ay'] ?? 0.0;
@@ -261,156 +238,165 @@ void _saveToFirebase(HealthData data) async {
 @override
 void dispose() {
   // _bleSubcription?.cancel();
-  _stepSubscription?.cancel(); // Pastikan dimatikan agar hemat baterai
+  // _stepSubscription?.cancel(); // Pastikan dimatikan agar hemat baterai
   super.dispose();
 }
 
-void _initStepTracking() async {
-    // 1. Inisialisasi Listener Smartwatch (WearOsService)
-    WearOsService().initListener(); // Pastikan listener aktif
-    WearOsService().sensorStream.listen((data) {
-      if (mounted) {
-        setState(() {
-          // Ambil 'steps' dari Map yang dikirim WearOsService
-          _watchStepsToday = (data['steps'] ?? 0).toInt();
-          _calculateTotalSteps();
-        });
-      }
-    });
+// void _initStepTracking() async {
+//     // 1. Inisialisasi Listener Smartwatch (WearOsService)
+//     WearOsService().initListener(); // Pastikan listener aktif
+//     WearOsService().sensorStream.listen((data) {
+//       if (mounted) {
+//         setState(() {
+//           // Ambil 'steps' dari Map yang dikirim WearOsService
+//           _watchStepsToday = (data['steps'] ?? 0).toInt();
+//           _calculateTotalSteps();
+//         });
+//       }
+//     });
 
-    // 2. Inisialisasi Pedometer HP
-    if (await Permission.activityRecognition.request().isGranted) {
-      Pedometer.stepCountStream.listen((StepCount event) async {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        String today = DateTime.now().toString().split(' ')[0]; // YYYY-MM-DD
+//     // 2. Inisialisasi Pedometer HP
+//     // if (await Permission.activityRecognition.request().isGranted) {
+//     //   Pedometer.stepCountStream.listen((StepCount event) async {
+//     //     SharedPreferences prefs = await SharedPreferences.getInstance();
+//     //     String today = DateTime.now().toString().split(' ')[0]; // YYYY-MM-DD
         
-        // Ambil titik nol HP hari ini
-        int savedBase = prefs.getInt('phone_base_$today') ?? -1;
+//     //     // Ambil titik nol HP hari ini
+//     //     int savedBase = prefs.getInt('phone_base_$today') ?? -1;
 
-        if (savedBase == -1) {
-          // Jika baru pertama kali buka hari ini, set base ke angka sensor saat ini
-          await prefs.setInt('phone_base_$today', event.steps);
-          savedBase = event.steps;
-        }
+//     //     if (savedBase == -1) {
+//     //       // Jika baru pertama kali buka hari ini, set base ke angka sensor saat ini
+//     //       await prefs.setInt('phone_base_$today', event.steps);
+//     //       savedBase = event.steps;
+//     //     }
 
-        if (mounted) {
-          setState(() {
-            _phoneBaseSteps = savedBase;
-            _phoneStepsToday = event.steps - _phoneBaseSteps;
-            _calculateTotalSteps();
-          });
-        }
-      });
-    }
-  }
+//     //     if (mounted) {
+//     //       setState(() {
+//     //         _phoneBaseSteps = savedBase;
+//     //         _phoneStepsToday = event.steps - _phoneBaseSteps;
+//     //         _calculateTotalSteps();
+//     //       });
+//     //     }
+//     //   });
+//     // }
+//   }
 
-  void _calculateTotalSteps() {
-    int total = _phoneStepsToday + _watchStepsToday;
-    _stepsDisplay = total.toString();
+  // void _calculateTotalSteps() {
+  //   int total = _phoneStepsToday + _watchStepsToday;
+  //   _stepsDisplay = total.toString();
 
-    // Sinkronisasi ke Firestore agar ProfileScreen ikut update
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null) {
-      FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'totalSteps': total,
-        'lastUpdate': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    }
-  }
-  // --- LOGIKA SENSOR HP (Pedometer) ---
-  void _initPedometerHP() async {
-    if (await Permission.activityRecognition.request().isGranted) {
-      Pedometer.stepCountStream.listen((StepCount event) async {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        String today = DateTime.now().toString().split(' ')[0]; // YYYY-MM-DD
+  //   // Sinkronisasi ke Firestore agar ProfileScreen ikut update
+  //   final uid = FirebaseAuth.instance.currentUser?.uid;
+  //   if (uid != null) {
+  //     FirebaseFirestore.instance.collection('users').doc(uid).set({
+  //       'totalSteps': total,
+  //       'lastUpdate': FieldValue.serverTimestamp(),
+  //     }, SetOptions(merge: true));
+  //   }
+  // }
+  // // --- LOGIKA SENSOR HP (Pedometer) ---
+  // void _initPedometerHP() async {
+  //   if (await Permission.activityRecognition.request().isGranted) {
+  //     Pedometer.stepCountStream.listen((StepCount event) async {
+  //       SharedPreferences prefs = await SharedPreferences.getInstance();
+  //       String today = DateTime.now().toString().split(' ')[0]; // YYYY-MM-DD
         
-        // Ambil titik nol langkah HP hari ini
-        int savedBase = prefs.getInt('phone_base_$today') ?? -1;
+  //       // Ambil titik nol langkah HP hari ini
+  //       int savedBase = prefs.getInt('phone_base_$today') ?? -1;
 
-        if (savedBase == -1) {
-          await prefs.setInt('phone_base_$today', event.steps);
-          savedBase = event.steps;
-        }
+  //       if (savedBase == -1) {
+  //         await prefs.setInt('phone_base_$today', event.steps);
+  //         savedBase = event.steps;
+  //       }
 
-        setState(() {
-          _phoneBaseSteps = savedBase;
-          _phoneStepsDay = event.steps - _phoneBaseSteps;
-          _updateTotalAndSync();
-        });
-      });
-    }
-  }
+  //       setState(() {
+  //         _phoneBaseSteps = savedBase;
+  //         _phoneStepsDay = event.steps - _phoneBaseSteps;
+  //         _updateTotalAndSync();
+  //       });
+  //     });
+  //   }
+  // }
 
-  // --- GABUNGKAN & SIMPAN ---
-  void _updateTotalAndSync() {
-    int totalSteps = _phoneStepsDay + _watchStepsDay;
-    _stepsDisplay = totalSteps.toString();
-    double distanceKm = totalSteps * 0.000762;
+  // // --- GABUNGKAN & SIMPAN ---
+  // void _updateTotalAndSync() {
+  //   int totalSteps = _phoneStepsDay + _watchStepsDay;
+  //   _stepsDisplay = totalSteps.toString();
+  //   double distanceKm = totalSteps * 0.000762;
 
-    // Kirim ke Firestore agar ProfileScreen ikut update
-    if (_uid != null) {
-      FirebaseFirestore.instance.collection('users').doc(_uid).set({
-        'steps': totalSteps,
-        'distance' : distanceKm,
-        'calories' : _totalCaloriesBurned,
-        'lastUpdate': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    }
-  }
+  //   // Kirim ke Firestore agar ProfileScreen ikut update
+  //   if (_uid != null) {
+  //     FirebaseFirestore.instance.collection('users').doc(_uid).set({
+  //       'steps': totalSteps,
+  //       'distance' : distanceKm,
+  //       'calories' : _totalCaloriesBurned,
+  //       'lastUpdate': FieldValue.serverTimestamp(),
+  //     }, SetOptions(merge: true));
+  //   }
+  // }
+
 Future<void> _initApp() async {
+  
+  if (!mounted) return;
+  print("🟡FUNGSI _INITAPP DIJALANKAN");
   setState(() => _isLoading = true);
 
-  final prefs = await SharedPreferences.getInstance();
+  try{
+    final prefs = await SharedPreferences.getInstance();
   _totalCaloriesBurned = prefs.getDouble('saved_calories') ?? 0.0;
   
   await _handlePermissions(); 
 
-  // 1. Ambil data Health Connect DULU sampai selesai
   bool hasHealthPermission = await _healthService.requestPermissions();
   if (hasHealthPermission) {
     final data = await _healthService.fetchTodayData();
     if (mounted) {
       setState(() {
-        // Misal dapat 2000 langkah dari jam tangan/cloud
-        _stepsAtStartOfSession = data['steps'] ?? 0;
-        _currentSteps = _stepsAtStartOfSession; 
+        _currentSteps = data['steps'] ?? 0;
+        _currentSleep = data['sleep'] ?? 0.0;
+        _currentOxygen = data['oxygen'] ?? 0.0;
+
+        _isLoading = false;
       });
     }
-  }
-
+    }
+  } catch (e) {
+    debugPrint("Error in _initApp: $e");
+  } 
+  
   // 2. Baru jalankan pedometer SETELAH data awal didapat
-  _initRealTimePedometer();
+  // _initRealTimePedometer();
 
   if (mounted) setState(() => _isLoading = false);
 }
 
-void _initRealTimePedometer() {
-  _pedometerSubscription = Pedometer.stepCountStream.listen(
-    (StepCount event) {
-      if (mounted) {
-        setState(() {
-          if (_pedometerBase == 0) {
-            _pedometerBase = event.steps;
-          }
+// void _initRealTimePedometer() {
+//   _pedometerSubscription = Pedometer.stepCountStream.listen(
+//     (StepCount event) {
+//       if (mounted) {
+//         setState(() {
+//           if (_pedometerBase == 0) {
+//             _pedometerBase = event.steps;
+//           }
 
-          int stepsSinceAppOpen = event.steps - _pedometerBase;
+//           int stepsSinceAppOpen = event.steps - _pedometerBase;
 
-          // LOGIKA ANTI-NOL:
-          if (_stepsAtStartOfSession > 0) {
-            // Jika Health Connect ada isinya, gunakan Hybrid
-            _currentSteps = _stepsAtStartOfSession + stepsSinceAppOpen;
-          } else {
-            // JIKA HEALTH CONNECT 0, tampilkan saja langkah dari sensor HP langsung
-            // Supaya user tidak melihat angka 0 terus menerus
-            _currentSteps = event.steps; 
-          }
+//           // LOGIKA ANTI-NOL:
+//           if (_stepsAtStartOfSession > 0) {
+//             // Jika Health Connect ada isinya, gunakan Hybrid
+//             _currentSteps = _stepsAtStartOfSession + stepsSinceAppOpen;
+//           } else {
+//             // JIKA HEALTH CONNECT 0, tampilkan saja langkah dari sensor HP langsung
+//             // Supaya user tidak melihat angka 0 terus menerus
+//             _currentSteps = event.steps; 
+//           }
           
-          debugPrint("Langkah di Layar: $_currentSteps");
-        });
-      }
-    },
-  );
-}
+//           debugPrint("Langkah di Layar: $_currentSteps");
+//         });
+//       }
+//     },
+//   );
+// }
 
 // Masukkan di dalam class _DashboardContentState
 
@@ -444,7 +430,7 @@ Future<void> _handlePermissions() async {
     Permission.bluetoothScan,
     Permission.bluetoothConnect,
     Permission.location,
-    Permission.activityRecognition, // Wajib untuk pedometer
+    Permission.activityRecognition, 
     Permission.sensors,
   ].request();
   
@@ -653,7 +639,7 @@ StreamBuilder(
         Expanded(
   child: _buildStatCard(
     icon: Icons.directions_walk, // Ikon orang berjalan
-    value: _currentSteps.toString(), // Mengambil variabel langkah real-time
+    value: NumberFormat.decimalPattern().format(_currentSteps), // Mengambil variabel langkah real-time
     label: 'Steps Today',
     color: const Color(0xFF4ECDC4),
     bgColor: const Color(0xFF4ECDC4).withOpacity(0.1),
@@ -943,9 +929,9 @@ Widget _buildHeartRateCard() {
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildMiniStat(
-                        'Active Time',
+                        'Sleep',
                         '${_currentSleep.toStringAsFixed(1)}h',
-                        Icons.access_time,
+                        Icons.single_bed_sharp,
                       ),
                     ),
                   ],
@@ -1234,4 +1220,3 @@ Widget _buildHeartRateCard() {
     );
   }
 }
-
