@@ -133,6 +133,7 @@ bool _isWatchConnected = false;
   // int _stepsAtStartOfSession = 0; // Angka dari Health Connect saat app dibuka
   int _pedometerBase = 0;
   double _totalCaloriesBurned = 0.0;
+  double _currentCaloriesHC = 0.0;
 DateTime? _lastUpdateTime;
 
   @override
@@ -144,6 +145,10 @@ void initState() {
   // _initPedometerHP();
   // _initStepTracking();
   // _initHealthConnect();
+
+  Future.delayed(Duration(seconds: 1), () {
+    _initApp();
+  });
 
   Timer.periodic(const Duration(minutes: 10), (timer){
     _healthService.syncHealthData();
@@ -345,29 +350,31 @@ Future<void> _initApp() async {
     final prefs = await SharedPreferences.getInstance();
   _totalCaloriesBurned = prefs.getDouble('saved_calories') ?? 0.0;
   
-  await _handlePermissions(); 
+  await _handlePermissions();
 
-  bool hasHealthPermission = await _healthService.requestPermissions();
-  if (hasHealthPermission) {
+    // ✅ Abaikan return value, langsung fetch
+    await _healthService.requestPermissions();
     final data = await _healthService.fetchTodayData();
+
     if (mounted) {
+      print("🔥 Steps: ${data['steps']}, Sleep: ${data['sleep']}, Oxygen: ${data['oxygen']}");
       setState(() {
         _currentSteps = data['steps'] ?? 0;
-        _currentSleep = data['sleep'] ?? 0.0;
-        _currentOxygen = data['oxygen'] ?? 0.0;
-
+        _currentSleep = (data['sleep'] ?? 0.0).toDouble();
+        _currentOxygen = (data['oxygen'] ?? 0.0).toDouble();
+        _currentCaloriesHC = (data['calories'] ?? 0.0).toDouble();
         _isLoading = false;
       });
     }
-    }
   } catch (e) {
     debugPrint("Error in _initApp: $e");
+    if (mounted) setState(() => _isLoading = false);
   } 
   
   // 2. Baru jalankan pedometer SETELAH data awal didapat
   // _initRealTimePedometer();
 
-  if (mounted) setState(() => _isLoading = false);
+  // if (mounted) setState(() => _isLoading = false);
 }
 
 // void _initRealTimePedometer() {
@@ -629,7 +636,7 @@ StreamBuilder(
         Expanded(
           child: _buildStatCard(
             icon: Icons.local_fire_department,
-            value: _totalCaloriesBurned.toStringAsFixed(0),
+            value: _currentCaloriesHC.toStringAsFixed(0),
             label: 'Calories',
             color: const Color(0xFFFF6B6B),
             bgColor: const Color(0xFFFF6B6B).withOpacity(0.1),
@@ -1022,6 +1029,17 @@ Widget _buildHeartRateCard() {
   }
 
   Widget _buildProgressBars() {
+    return StreamBuilder<DocumentSnapshot>(
+    stream: FirebaseFirestore.instance
+        .collection('users')
+        .doc(FirebaseAuth.instance.currentUser?.uid)
+        .snapshots(),
+    builder: (context, snapshot) {
+      double waterIntake = 0.0;
+      if (snapshot.hasData && snapshot.data!.exists) {
+        final data = snapshot.data!.data() as Map<String, dynamic>;
+        waterIntake = (data['waterIntake'] ?? 0.0).toDouble();
+      }
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1054,7 +1072,7 @@ Widget _buildHeartRateCard() {
           const SizedBox(height: 16),
           _buildProgressItem(
             'Calories',
-            _totalCaloriesBurned
+            _currentCaloriesHC
             // (_todayStats?.totalCalories ?? _latestHealthData?.calories ?? 0)
                 .toInt(),
             500,
@@ -1062,24 +1080,31 @@ Widget _buildHeartRateCard() {
           ),
           const SizedBox(height: 16),
           _buildProgressItem(
-            'Active Time',
-            // ((_todayStats?.avgSleepHours ??
-            //             _latestHealthData?.sleepHours ??
-            //             0) *
-            //         60)
-            //     .toInt(),
-            1,
+            'Sleep',
+            (_currentSleep * 60).toInt(),
             480,
             // , // 8 hours in minutes
             Colors.green,
+            displayValue: '${_currentSleep.toStringAsFixed(1)}h/8h'
           ),
+          const SizedBox(height: 16),
+          _buildProgressItem(
+            'Water',
+            (waterIntake * 1000).toInt(),
+            2,
+            Colors.lightBlue,
+            displayValue: '${waterIntake.toStringAsFixed(1)}L / 2L',
+          )
         ],
       ),
+    );
+    },
     );
   }
 
   Widget _buildProgressItem(
-      String label, int current, int target, Color color) {
+      String label, int current, int target, Color color,
+      {String suffix = '', String? displayValue}) {
     final progress = (current / target).clamp(0.0, 1.0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

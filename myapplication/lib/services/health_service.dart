@@ -16,88 +16,139 @@ class HealthConnectService {
     HealthDataType.DISTANCE_DELTA,
   ];
 
+  final List<HealthDataAccess> permissions = [
+    HealthDataAccess.READ,
+    HealthDataAccess.READ,
+    HealthDataAccess.READ,
+    HealthDataAccess.READ,
+    HealthDataAccess.READ,
+  ];
+
   Future<bool> requestPermissions() async {
     health.configure();
-
-    bool? hasPermission = await health.hasPermissions(types);
-
-    if (hasPermission == null || !hasPermission) {
-      try {
-        bool requested = await health.requestAuthorization(types);
-        return requested;
-      } catch (e) {
-        print("error requesting health permission: $e");
-        return false;
-      }
+    try {
+      // bool requested = await health.requestAuthorization(types, permissions: permissions);
+      await health.requestAuthorization(types, permissions: permissions);
+      // print("🏥 requestAuthorization result: $requested");
+      return true;
+    } catch (e) {
+      print("🏥 ERROR requestAuthorization: $e");
+      return false;
     }
-    return true;
   }
 
   Future<Map<String, dynamic>> fetchTodayData() async {
-    // final String? uid = _auth.currentUser?.uid;
+    health.configure();
 
-    bool authorized = await requestPermissions();
-    if (!authorized) return {'steps': 0, 'sleep': 0.0, 'oxygen': 0.0};
+    try {
+    await health.requestAuthorization(types, permissions: permissions);
+  } catch (e) {
+    print("⚠️ requestAuthorization error (ignored): $e");
+  }
 
     try {
       final now = DateTime.now();
       final midnight = DateTime(now.year, now.month, now.day);
+      final sleepStart = midnight.subtract(const Duration(hours: 6));
 
+      // Ambil steps aggregate
       int totalSteps = 0;
       try {
-        int? aggregateSteps = await health.getTotalStepsInInterval(midnight, now);
-        totalSteps = aggregateSteps ?? 0;
+        int? steps = await health.getTotalStepsInInterval(midnight, now);
+        totalSteps = steps ?? 0;
       } catch (e) {
-        print("gagal ambil agregat steps");
+        print("⚠️ Gagal ambil aggregate steps: $e");
       }
 
+      // Ambil raw data
       List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(
-        types: types, 
-        startTime: midnight, 
-        endTime: now,);
-      
-      double sleepHours = 0;
-      double bloodOxygen = 0;
+        types: [
+          HealthDataType.STEPS,
+          HealthDataType.BLOOD_OXYGEN,
+          HealthDataType.ACTIVE_ENERGY_BURNED,
+          HealthDataType.BASAL_ENERGY_BURNED,
+          HealthDataType.DISTANCE_DELTA,
+        ],
+        startTime: midnight,
+        endTime: now,
+      );
 
-      for (var p in healthData) {
-        if (p.type == HealthDataType.SLEEP_SESSION) {
-          sleepHours += p.dateTo.difference(p.dateFrom).inMinutes/60;
-        } else if (p.type == HealthDataType.BLOOD_OXYGEN){
-          bloodOxygen = double.tryParse(p.value.toString()) ?? 0;
-        } else if (p.type == HealthDataType.STEPS && totalSteps == 0) {
-          totalSteps += (double.tryParse(p.value.toString()) ?? 0).toInt();
+      List<HealthDataPoint> sleepData = await health.getHealthDataFromTypes(
+        types: [HealthDataType.SLEEP_SESSION],
+        startTime: sleepStart,  // kemarin jam 18:00
+        endTime: now,
+      );
+
+      double sleepHours = 0;
+      for (var p in sleepData) {
+        print("😴 SLEEP: ${p.dateFrom} → ${p.dateTo}");
+        sleepHours += p.dateTo.difference(p.dateFrom).inMinutes / 60;
+      }
+
+      double bloodOxygen = 0;
+      double activeCalories = 0;
+      double basalCalories = 0;
+
+      // Fallback steps kalau aggregate gagal
+      if (totalSteps == 0) {
+        for (var p in healthData) {
+          if (p.type == HealthDataType.STEPS) {
+            totalSteps += (p.value as num).toInt();
+          }
         }
       }
 
-      print("Debug Fetch: Steps: $totalSteps, sleep: $sleepHours, Oxygen: $bloodOxygen");
+      for (var p in healthData) {
+        print("📊 Total healthData points: ${healthData.length}");
+        print("📊 TYPE: ${p.type} | VALUE: ${p.value} | FROM: ${p.dateFrom} | TO: ${p.dateTo}");
+      switch (p.type) {
+        case HealthDataType.SLEEP_SESSION:
+          sleepHours += p.dateTo.difference(p.dateFrom).inMinutes / 60;
+          break;
+        case HealthDataType.BLOOD_OXYGEN:
+          bloodOxygen = double.tryParse(p.value.toString()) ?? 0;
+          break;
+        case HealthDataType.ACTIVE_ENERGY_BURNED:       // ✅ tambah
+          activeCalories += double.tryParse(p.value.toString()) ?? 0;
+          break;
+        case HealthDataType.BASAL_ENERGY_BURNED:        // ✅ tambah
+          basalCalories += double.tryParse(p.value.toString()) ?? 0;
+          break;
+        default:
+          break;
+      }
+      }
 
-      print("RAW STEPS DATA: $totalSteps");
-print("RAW SLEEP DATA: $sleepHours");
-print("RAW OXYGEN DATA: $bloodOxygen");
+      print("🔥 Steps: $totalSteps | Sleep: $sleepHours | Oxygen: $bloodOxygen");
 
       return {
         'steps': totalSteps,
-        'sleep': sleepHours,
+        'sleep': double.parse(sleepHours.toStringAsFixed(1)),
         'oxygen': bloodOxygen,
       };
     } catch (e) {
-      print("❌ Error Fetching Data: $e");
+      print("❌ Error fetchTodayData: $e");
       return {'steps': 0, 'sleep': 0.0, 'oxygen': 0.0};
     }
   }
-  
+
   Future<void> syncHealthData() async {
     final String? uid = _auth.currentUser?.uid;
     if (uid == null) return;
 
     health.configure();
 
-    bool requested = await health.requestAuthorization(types);
-    if (!requested) return;
+    // ✅ Pakai permissions list yang konsisten
+    bool requested = await health.requestAuthorization(types, permissions: permissions);
+    if (!requested) {
+      print("⚠️ syncHealthData: permission tidak granted");
+      return;
+    }
 
     try {
       final now = DateTime.now();
       final midnight = DateTime(now.year, now.month, now.day);
+      final sleepStart = midnight.subtract(const Duration(hours: 6));
 
       int? steps = await health.getTotalStepsInInterval(midnight, now);
 
@@ -113,7 +164,7 @@ print("RAW OXYGEN DATA: $bloodOxygen");
       double bloodOxygen = 0;
       double sleepHours = 0;
 
-      for (var p in healthData){
+      for (var p in healthData) {
         switch (p.type) {
           case HealthDataType.ACTIVE_ENERGY_BURNED:
             activeCalories += double.parse(p.value.toString());
@@ -125,12 +176,10 @@ print("RAW OXYGEN DATA: $bloodOxygen");
             distance += double.parse(p.value.toString());
             break;
           case HealthDataType.BLOOD_OXYGEN:
-            distance = double.parse(p.value.toString());
+            bloodOxygen = double.parse(p.value.toString());
             break;
           case HealthDataType.SLEEP_SESSION:
-            if (p.dateFrom != null && p.dateTo != null) {
-              sleepHours += p.dateTo.difference(p.dateFrom).inMinutes / 60;
-            }
+            sleepHours += p.dateTo.difference(p.dateFrom).inMinutes / 60;
             break;
           default:
             break;
@@ -141,16 +190,15 @@ print("RAW OXYGEN DATA: $bloodOxygen");
         'steps': steps ?? 0,
         'distance': distance / 1000,
         'calories': activeCalories,
-        'basal_calories': basalCalories,
-        'total_calories': activeCalories + basalCalories,
+        'total_calories': activeCalories,
         'blood_oxygen': bloodOxygen,
         'sleep_hours': sleepHours,
         'lastUpdate': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      print("✅ Health Connect Synced: Steps: $steps, Sleep: ${sleepHours.toStringAsFixed(1)}h");
+      print("✅ Synced: Steps=$steps | Sleep=${sleepHours.toStringAsFixed(1)}h");
     } catch (e) {
-      print("❌ Error Sync Health Data: $e");
+      print("❌ Error syncHealthData: $e");
     }
   }
 }

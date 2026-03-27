@@ -21,8 +21,13 @@ void _initForegroundTask() {
       id: 888,
       channelId: 'stress_monitor',
       channelName: 'Stress Monitor',
-      channelImportance: NotificationChannelImportance.LOW,
-      priority: NotificationPriority.LOW,
+      channelImportance: NotificationChannelImportance.HIGH,
+      priority: NotificationPriority.HIGH,
+      iconData: const NotificationIconData(
+        resType: ResourceType.mipmap,
+        resPrefix:ResourcePrefix.ic,
+        name: 'launcher_icon',
+      ),
     ),
     iosNotificationOptions: const IOSNotificationOptions(),
     foregroundTaskOptions: const ForegroundTaskOptions(
