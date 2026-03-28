@@ -7,10 +7,33 @@ import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:frontend/services/health_service.dart';
 
-class ActivityScreen extends StatelessWidget {
+class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
 
+  @override
+  State<ActivityScreen> createState() => _ActivityScreenState();
+}
+class _ActivityScreenState extends State<ActivityScreen> {
+  final HealthConnectService _healthService = HealthConnectService();
+  @override
+  void initState() {
+    super.initState();
+    _syncData();
+  }
+
+  Future<void> _syncData() async {
+    try {
+      print(" Mulai sync activity...");
+      await _healthService.requestPermissions();
+      await _healthService.syncHealthData();
+      print("sync selesai");
+    } catch (e, stackTrace) {
+      print("❌ Error _syncData: $e");
+      print("❌ StackTrace: $stackTrace");
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -10,7 +10,6 @@ class HealthConnectService {
   final List<HealthDataType> types = [
     HealthDataType.STEPS,
     HealthDataType.BLOOD_OXYGEN,
-    HealthDataType.BASAL_ENERGY_BURNED,
     HealthDataType.ACTIVE_ENERGY_BURNED,
     HealthDataType.SLEEP_SESSION,
     HealthDataType.DISTANCE_DELTA,
