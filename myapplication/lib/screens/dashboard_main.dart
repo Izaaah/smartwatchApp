@@ -82,7 +82,7 @@ class _DashboardMainState extends State<DashboardMain> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.fitness_center),
-            label: 'Stats',
+            label: 'Activity',
           ),
           // BottomNavigationBarItem(
           //   icon: Icon(Icons.analytics),
@@ -123,6 +123,7 @@ bool _isWatchConnected = false;
   bool _isLoading = true;
   int _notificationCount = 0;
   String _stepsDisplay = "0"; 
+  double _currentDistance = 0.0;
   int _lastSavedHR = 0;
   final User? user = FirebaseAuth.instance.currentUser;
   // late Stream<StepCount> _stepCountStream;
@@ -146,9 +147,9 @@ void initState() {
   // _initStepTracking();
   // _initHealthConnect();
 
-  Future.delayed(Duration(seconds: 1), () {
-    _initApp();
-  });
+  // Future.delayed(Duration(seconds: 1), () {
+  //   _initApp();
+  // });
 
   Timer.periodic(const Duration(minutes: 10), (timer){
     _healthService.syncHealthData();
@@ -362,7 +363,8 @@ Future<void> _initApp() async {
         _currentSteps = data['steps'] ?? 0;
         _currentSleep = (data['sleep'] ?? 0.0).toDouble();
         _currentOxygen = (data['oxygen'] ?? 0.0).toDouble();
-        _currentCaloriesHC = (data['calories'] ?? 0.0).toDouble();
+        _currentCaloriesHC = (data['steps'] ?? 0.0).toDouble();
+        _currentDistance = (data['steps'] ?? 0) * 0.000762;
         _isLoading = false;
       });
     }
@@ -496,7 +498,7 @@ Future<void> _handlePermissions() async {
                         const SizedBox(height: 16),
 
                         // Recent Activity
-                        _buildRecentActivity(),
+                        // _buildRecentActivity(),
                     //   ],
                     ],
                   ),
@@ -636,8 +638,8 @@ StreamBuilder(
         Expanded(
           child: _buildStatCard(
             icon: Icons.local_fire_department,
-            value: _currentCaloriesHC.toStringAsFixed(0),
-            label: 'Calories',
+            value: '${_currentDistance.toStringAsFixed(2)} km',
+            label: 'Distance',
             color: const Color(0xFFFF6B6B),
             bgColor: const Color(0xFFFF6B6B).withOpacity(0.1),
           ),
@@ -1071,6 +1073,15 @@ Widget _buildHeartRateCard() {
           ),
           const SizedBox(height: 16),
           _buildProgressItem(
+            'Distance',
+            _currentDistance
+            // (_todayStats?.totalCalories ?? _latestHealthData?.calories ?? 0)
+                .toInt(),
+            5,
+            Colors.orange,
+          ),
+          const SizedBox(height: 16),
+          _buildProgressItem(
             'Calories',
             _currentCaloriesHC
             // (_todayStats?.totalCalories ?? _latestHealthData?.calories ?? 0)
@@ -1142,106 +1153,107 @@ Widget _buildHeartRateCard() {
     );
   }
 
-  Widget _buildRecentActivity() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Recent Activity',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildActivityItem(
-          'Morning Run',
-          '30 minutes • 3.2 km',
-          Icons.directions_run,
-          const Color(0xFF4ECDC4),
-          '09:00 AM',
-        ),
-        const SizedBox(height: 12),
-        _buildActivityItem(
-          'Cycling',
-          '45 minutes • 8.5 km',
-          Icons.directions_bike,
-          const Color(0xFF9B59B6),
-          '11:30 AM',
-        ),
-        const SizedBox(height: 12),
-        _buildActivityItem(
-          'Walking',
-          '25 minutes • 1.8 km',
-          Icons.directions_walk,
-          const Color(0xFF3498DB),
-          '02:15 PM',
-        ),
-      ],
-    );
-  }
+  // Widget _buildRecentActivity() {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       const Text(
+  //         'Recent Activity',
+  //         style: TextStyle(
+  //           color: Colors.white,
+  //           fontSize: 18,
+  //           fontWeight: FontWeight.bold,
+  //         ),
+  //       ),
+  //       const SizedBox(height: 16),
+  //       _buildActivityItem(
+  //         'Morning Run',
+  //         '30 minutes • 3.2 km',
+  //         Icons.directions_run,
+  //         const Color(0xFF4ECDC4),
+  //         '09:00 AM',
+  //       ),
+  //       const SizedBox(height: 12),
+  //       _buildActivityItem(
+  //         'Cycling',
+  //         '45 minutes • 8.5 km',
+  //         Icons.directions_bike,
+  //         const Color(0xFF9B59B6),
+  //         '11:30 AM',
+  //       ),
+  //       const SizedBox(height: 12),
+  //       _buildActivityItem(
+  //         'Walking',
+  //         '25 minutes • 1.8 km',
+  //         Icons.directions_walk,
+  //         const Color(0xFF3498DB),
+  //         '02:15 PM',
+  //       ),
+  //     ],
+  //   );
+  // }
 
-  Widget _buildActivityItem(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    String time,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1F3A),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.05),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            time,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildActivityItem(
+  //   String title,
+  //   String subtitle,
+  //   IconData icon,
+  //   Color color,
+  //   String time,
+  // ) {
+  //   return Container(
+  //     padding: const EdgeInsets.all(16),
+  //     decoration: BoxDecoration(
+  //       color: const Color(0xFF1A1F3A),
+  //       borderRadius: BorderRadius.circular(16),
+  //       border: Border.all(
+  //         color: Colors.white.withOpacity(0.05),
+  //         width: 1,
+  //       ),
+  //     ),
+  //     child: Row(
+  //       children: [
+  //         Container(
+  //           padding: const EdgeInsets.all(10),
+  //           decoration: BoxDecoration(
+  //             color: color.withOpacity(0.15),
+  //             borderRadius: BorderRadius.circular(12),
+  //           ),
+  //           child: Icon(icon, color: color, size: 24),
+  //         ),
+  //         const SizedBox(width: 16),
+  //         Expanded(
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Text(
+  //                 title,
+  //                 style: const TextStyle(
+  //                   color: Colors.white,
+  //                   fontSize: 16,
+  //                   fontWeight: FontWeight.w600,
+  //                 ),
+  //               ),
+  //               const SizedBox(height: 4),
+  //               Text(
+  //                 subtitle,
+  //                 style: TextStyle(
+  //                   color: Colors.white.withOpacity(0.6),
+  //                   fontSize: 13,
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //         Text(
+  //           time,
+  //           style: TextStyle(
+  //             color: Colors.white.withOpacity(0.5),
+  //             fontSize: 12,
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
 }

@@ -87,6 +87,8 @@ class HealthConnectService {
       double bloodOxygen = 0;
       double activeCalories = 0;
       double basalCalories = 0;
+      double distance = 0;
+      // double distanceKm = distance/1000;
 
       // Fallback steps kalau aggregate gagal
       if (totalSteps == 0) {
@@ -110,20 +112,21 @@ class HealthConnectService {
         case HealthDataType.ACTIVE_ENERGY_BURNED:       // ✅ tambah
           activeCalories += double.tryParse(p.value.toString()) ?? 0;
           break;
-        case HealthDataType.BASAL_ENERGY_BURNED:        // ✅ tambah
-          basalCalories += double.tryParse(p.value.toString()) ?? 0;
+        case HealthDataType.DISTANCE_DELTA:        // ✅ tambah
+          distance += double.tryParse(p.value.toString()) ?? 0;
           break;
         default:
           break;
       }
       }
 
-      print("🔥 Steps: $totalSteps | Sleep: $sleepHours | Oxygen: $bloodOxygen");
+      print("🔥 Steps: $totalSteps | Sleep: $sleepHours | Oxygen: $bloodOxygen | Distance: ${distance / 1000} km");
 
       return {
         'steps': totalSteps,
         'sleep': double.parse(sleepHours.toStringAsFixed(1)),
         'oxygen': bloodOxygen,
+        'distance': double.parse((distance / 1000).toStringAsFixed(2)),
       };
     } catch (e) {
       print("❌ Error fetchTodayData: $e");
@@ -133,16 +136,18 @@ class HealthConnectService {
 
   Future<void> syncHealthData() async {
     final String? uid = _auth.currentUser?.uid;
-    if (uid == null) return;
-
+    print("🔥 syncHealthData dipanggil, uid: $uid");
+    if (uid == null) {
+      print("❌ uid null, return");
+      return;
+    }
     health.configure();
 
-    // ✅ Pakai permissions list yang konsisten
     bool requested = await health.requestAuthorization(types, permissions: permissions);
     if (!requested) {
       print("⚠️ syncHealthData: permission tidak granted");
       return;
-    }
+    } print("🔥 Setelah requestAuthorization");
 
     try {
       final now = DateTime.now();
@@ -150,7 +155,7 @@ class HealthConnectService {
       final sleepStart = midnight.subtract(const Duration(hours: 6));
 
       int? steps = await health.getTotalStepsInInterval(midnight, now);
-
+      print("🔥 Steps fetched: $steps");
       List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(
         types: types,
         startTime: midnight.subtract(const Duration(days: 1)),
@@ -183,8 +188,10 @@ class HealthConnectService {
           default:
             break;
         }
-      }
-
+      } 
+      print("🔥 healthData length: ${healthData.length}");
+      print("🔥 Calories: $activeCalories | Distance: $distance");
+      
       await _firestore.collection('users').doc(uid).set({
         'steps': steps ?? 0,
         'distance': distance / 1000,
@@ -193,7 +200,7 @@ class HealthConnectService {
         'blood_oxygen': bloodOxygen,
         'sleep_hours': sleepHours,
         'lastUpdate': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      }, SetOptions(merge: true)); print("✅ Firestore set selesai");
 
       print("✅ Synced: Steps=$steps | Sleep=${sleepHours.toStringAsFixed(1)}h");
     } catch (e) {

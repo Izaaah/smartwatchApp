@@ -46,8 +46,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
             children: [
               _buildHeader(),
               const SizedBox(height: 24),
-              _buildTodaySummary(),
-              const SizedBox(height: 24),
+              // _buildTodaySummary(),
+              // const SizedBox(height: 24),
               _buildActivityTypes(context),
               const SizedBox(height: 24),
               _buildTodayActivities(),
@@ -66,7 +66,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Stats',
+              'Activity',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.6),
                 fontSize: 14,
@@ -99,112 +99,112 @@ class _ActivityScreenState extends State<ActivityScreen> {
     );
   }
 
-  Widget _buildTodaySummary() {
-    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+  // Widget _buildTodaySummary() {
+  //   final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .snapshots(),
-      builder: (context, snapshot) {
-        String steps = '0';
-        String distance= '0.0 km';
-        String calories = '0';
+  //   return StreamBuilder<DocumentSnapshot>(
+  //     stream: FirebaseFirestore.instance
+  //       .collection('users')
+  //       .doc(userId)
+  //       .snapshots(),
+  //     builder: (context, snapshot) {
+  //       String steps = '0';
+  //       String distance= '0.0 km';
+  //       String calories = '0';
 
-        if (snapshot.hasData && snapshot.data!.exists) {
-          var data = snapshot.data!.data() as Map<String, dynamic>;
-          steps = data['steps']?.toString() ?? '0';
+  //       if (snapshot.hasData && snapshot.data!.exists) {
+  //         var data = snapshot.data!.data() as Map<String, dynamic>;
+  //         steps = data['steps']?.toString() ?? '0';
 
-          double distValue = (data['distance'] ?? 0.0).toDouble();
-          distance = "${distValue.toStringAsFixed(2)} km";
+  //         double distValue = (data['distance'] ?? 0.0).toDouble();
+  //         distance = "${distValue.toStringAsFixed(2)} km";
 
-          double calValue = (data['calories'] ?? 0.0).toDouble();
-          calories = calValue.toStringAsFixed(0);
-        }
+  //         double calValue = (data['calories'] ?? 0.0).toDouble();
+  //         calories = calValue.toStringAsFixed(0);
+  //       }
 
-        return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF4ECDC4),
-            const Color(0xFF26D0CE),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Today\'s Summary',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryItem(
-                  steps,
-                  'Steps',
-                  Icons.directions_walk,
-                ),
-              ),
-              Expanded(
-                child: _buildSummaryItem(
-                  distance,
-                  'Distance',
-                  Icons.straighten,
-                ),
-              ),
-              Expanded(
-                child: _buildSummaryItem(
-                  calories,
-                  'Calories',
-                  Icons.local_fire_department,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-      },
-    );
+  //       return Container(
+  //     padding: const EdgeInsets.all(20),
+  //     decoration: BoxDecoration(
+  //       gradient: LinearGradient(
+  //         colors: [
+  //           const Color(0xFF4ECDC4),
+  //           const Color(0xFF26D0CE),
+  //         ],
+  //         begin: Alignment.topLeft,
+  //         end: Alignment.bottomRight,
+  //       ),
+  //       borderRadius: BorderRadius.circular(24),
+  //     ),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         const Text(
+  //           'Today\'s Summary',
+  //           style: TextStyle(
+  //             color: Colors.white,
+  //             fontSize: 16,
+  //             fontWeight: FontWeight.w600,
+  //           ),
+  //         ),
+  //         const SizedBox(height: 20),
+  //         Row(
+  //           children: [
+  //             Expanded(
+  //               child: _buildSummaryItem(
+  //                 steps,
+  //                 'Steps',
+  //                 Icons.directions_walk,
+  //               ),
+  //             ),
+  //             Expanded(
+  //               child: _buildSummaryItem(
+  //                 distance,
+  //                 'Distance',
+  //                 Icons.straighten,
+  //               ),
+  //             ),
+  //             Expanded(
+  //               child: _buildSummaryItem(
+  //                 calories,
+  //                 'Calories',
+  //                 Icons.local_fire_department,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  //     },
+  //   );
     
-  }
+  // }
 
-  Widget _buildSummaryItem(String value, String label, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, color: Colors.white, size: 28),
-        const SizedBox(height: 12),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.9),
-            fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
+  // Widget _buildSummaryItem(String value, String label, IconData icon) {
+  //   return Column(
+  //     children: [
+  //       Icon(icon, color: Colors.white, size: 28),
+  //       const SizedBox(height: 12),
+  //       Text(
+  //         value,
+  //         style: const TextStyle(
+  //           color: Colors.white,
+  //           fontSize: 24,
+  //           fontWeight: FontWeight.bold,
+  //         ),
+  //       ),
+  //       const SizedBox(height: 4),
+  //       Text(
+  //         label,
+  //         style: TextStyle(
+  //           color: Colors.white.withOpacity(0.9),
+  //           fontSize: 12,
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   // Widget _buildActivityTypes() {
   //   return Column(
