@@ -9,12 +9,13 @@ class MyBackgroundTaskHandler extends TaskHandler {
   Interpreter? _interpreter;
   List<double>? _mean;
   List<double>? _std;
+  String? _lastStatus;
 
   @override
   void onStart(DateTime timestamp, SendPort? sendPort) async {
     try {
       // Muat model - Gunakan path yang sesuai dengan pubspec.yaml
-      _interpreter = await Interpreter.fromAsset('model_emotion_lite.tflite');
+      _interpreter = await Interpreter.fromAsset('assets/model_emotion_lite.tflite');
       
       // Muat parameter scaler untuk normalisasi
       String jsonString = await rootBundle.loadString('assets/scaler_params.json');
@@ -60,7 +61,25 @@ class MyBackgroundTaskHandler extends TaskHandler {
 
         int label = _getMaxIndex(output[0]);
         String status = (label == 1) ? "Stress" : "Normal";
+        
+        if (status != _lastStatus) {
+          print("🔄 Status Berubah: $_lastStatus -> $status");
+          _lastStatus = status;
 
+          String notifTitle;
+          String notifText;
+
+          if (status == "Stress") {
+            notifTitle = '⚠️ Terdeteksi Stres';
+            notifText = 'Tingkat stes tinggi (${(probs[1] * 100).toStringAsFixed(1)}%). Coba istirahat sejenak.';
+          } else if (status == "Happy") {
+            notifTitle = 'Mood Anda Baik!';
+            notifText = 'Kondisi emosi terpantau positif.';
+          } else {
+            notifTitle = 'Kondisi Stabil';
+            notifText = 'Emosi terpantau normal.';
+          }
+        }
         FlutterForegroundTask.updateService(
           notificationTitle: status == "Stress" ? '⚠️ Terdeteksi Stres' : 'Kondisi Stabil ✅',
           notificationText: status == "Stress" 

@@ -9,7 +9,7 @@ class EmotionClassifier {
 
   Future<void> init() async {
     // Muat model dan scaler
-    _interpreter = await Interpreter.fromAsset('model_emotion_lite.tflite');
+    _interpreter = await Interpreter.fromAsset('assets/model_emotion_lite.tflite');
     String scalerString = await rootBundle.loadString('assets/scaler_params.json');
     _scaler = jsonDecode(scalerString);
   }

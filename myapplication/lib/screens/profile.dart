@@ -106,7 +106,7 @@ Future<void> _navigateToEditProfile(Map<String, dynamic> userData) async {
             children: [
               _buildProfileHeader(displayName, displayEmail),
               const SizedBox(height: 24),
-              _buildStatsGrid(),
+              // _buildStatsGrid(),
               const SizedBox(height: 24),
               _buildSettingsSection(context, userData),
               const SizedBox(height: 24),
@@ -291,32 +291,32 @@ Future<void> _navigateToEditProfile(Map<String, dynamic> userData) async {
   //   );
   // }
 
-  Widget _buildStatsGrid() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildStatCard(
-              'Total Steps',
-              '1,234,567',
-              Icons.directions_walk,
-              const Color(0xFF4ECDC4),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard(
-              'Workouts',
-              '124',
-              Icons.fitness_center,
-              const Color(0xFFFF6B6B),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildStatsGrid() {
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(horizontal: 16),
+  //     child: Row(
+  //       children: [
+  //         Expanded(
+  //           child: _buildStatCard(
+  //             'Total Steps',
+  //             '1,234,567',
+  //             Icons.directions_walk,
+  //             const Color(0xFF4ECDC4),
+  //           ),
+  //         ),
+  //         const SizedBox(width: 12),
+  //         Expanded(
+  //           child: _buildStatCard(
+  //             'Workouts',
+  //             '124',
+  //             Icons.fitness_center,
+  //             const Color(0xFFFF6B6B),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
@@ -480,7 +480,7 @@ Future<void> _navigateToEditProfile(Map<String, dynamic> userData) async {
           const Padding(
             padding: EdgeInsets.only(left: 4, bottom: 16),
             child: Text(
-              'Daily Goals',
+              'About App',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 20,
@@ -488,19 +488,19 @@ Future<void> _navigateToEditProfile(Map<String, dynamic> userData) async {
               ),
             ),
           ),
-          _buildSliderTile(
-            'Water Intake',
-            '${_selectedWaterGoal.toStringAsFixed(1)}L per day',
-            Icons.water_drop_outlined,
-            _selectedWaterGoal,
-            0.5,
-            5.0,
-            (value) {
-              setState(() {
-                _selectedWaterGoal = value;
-              });
-            },
-          ),
+          // _buildSliderTile(
+          //   'Water Intake',
+          //   '${_selectedWaterGoal.toStringAsFixed(1)}L per day',
+          //   Icons.water_drop_outlined,
+          //   _selectedWaterGoal,
+          //   0.5,
+          //   5.0,
+          //   (value) {
+          //     setState(() {
+          //       _selectedWaterGoal = value;
+          //     });
+          //   },
+          // ),
           const SizedBox(height: 24),
           _buildSettingsTile(
             'About',

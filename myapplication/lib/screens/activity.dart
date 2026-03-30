@@ -880,7 +880,26 @@ void _showMeditationDialog(BuildContext context){
             .limit(5)
             .snapshots(),
           builder: (context, snapshot) {
+            print("📋 recent_activities snapshot: ${snapshot.connectionState}");
+            print("📋 hasData: ${snapshot.hasData}");
+            print("📋 error: ${snapshot.error}");
+
+            if (snapshot.hasData) {
+              print("📋 docs count: ${snapshot.data!.docs.length}");
+            }
+
+            if (snapshot.hasError) {
+              return Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.red));
+            }
+
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+            if (snapshot.data!.docs.isEmpty) {
+              return const Center(
+                child: Text('Belum ada aktivitas hari ini', 
+                  style: TextStyle(color: Colors.white54)),
+              );
+            }
 
             return ListView.separated(
               shrinkWrap: true, 
