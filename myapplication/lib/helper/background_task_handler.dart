@@ -79,15 +79,20 @@ class MyBackgroundTaskHandler extends TaskHandler {
             notifTitle = 'Kondisi Stabil';
             notifText = 'Emosi terpantau normal.';
           }
-        }
-        FlutterForegroundTask.updateService(
-          notificationTitle: status == "Stress" ? '⚠️ Terdeteksi Stres' : 'Kondisi Stabil ✅',
-          notificationText: status == "Stress" 
-            ? 'Tingkat stres tinggi (${(probs[1] * 100).toStringAsFixed(1)}%)' 
-            : 'Emosi terpantau normal.',
-        );
 
+          FlutterForegroundTask.updateService(
+            notificationTitle: notifTitle,
+            notificationText: notifText,
+          );
         sendPort?.send(status);
+        }
+        // FlutterForegroundTask.updateService(
+        //   notificationTitle: status == "Stress" ? '⚠️ Terdeteksi Stres' : 'Kondisi Stabil ✅',
+        //   notificationText: status == "Stress" 
+        //     ? 'Tingkat stres tinggi (${(probs[1] * 100).toStringAsFixed(1)}%)' 
+        //     : 'Emosi terpantau normal.',
+        // );
+
       } catch (e) {
         print("Error saat prediksi: $e");
       }
