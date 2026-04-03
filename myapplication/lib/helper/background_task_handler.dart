@@ -40,6 +40,10 @@ class MyBackgroundTaskHandler extends TaskHandler {
       try {
         List<double> rawInput = List<double>.from(jsonDecode(featureString));
 
+        if (rawInput.length != 12) {
+          print("⚠️ Jumlah fitur tidak valid: ${rawInput.length}, expected 12");
+          return;
+        }
         // 1. Normalisasi
         List<double> inputScaled = [];
         for (int i = 0; i < 12; i++) {
