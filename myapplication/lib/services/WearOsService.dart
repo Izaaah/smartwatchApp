@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:convert';
 import 'package:watch_connectivity/watch_connectivity.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/helper/EmotionPreprocessor.dart';
 
 class WearOsService {
   static final WearOsService _instance = WearOsService._internal();
@@ -17,7 +18,10 @@ class WearOsService {
   final List<double> _hrBuffer = [];
   final List<double> _accMagBuffer = [];
   final int _windowSize = 60; // Sesuai WINDOW di training Python (60 detik)
-
+  List<double> _hrWindow = [];
+  List<double> _axWindow = [];
+  List<double> _ayWindow = [];
+  List<double> _azWindow = [];
   void initListener() {
     if (_subscription != null) return;
 

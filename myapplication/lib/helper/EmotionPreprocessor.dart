@@ -25,7 +25,7 @@ class EmotionPreprocessor {
       List<double> magnitude = [];
       int len = [ax.length, ay.length, az.length].reduce((a,b) => a < b ? a : b);
       for (int i = 0; i < len; i++) {
-        magnitude.add(sqrt(ax[i] * ax[i] + ay[i] + az[i] * az[i]));
+        magnitude.add(sqrt(ax[i] * ax[i] + ay[i] * ay[i] + az[i] * az[i]));
       }
       return magnitude;
     }
