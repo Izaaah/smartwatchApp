@@ -12,8 +12,8 @@ class EmotionPreprocessor {
     double std = sqrt(variance);
 
     List<double> sorted = List.from(data)..sort();
-    double minVal = data.reduce(min);
-    double maxVal = data.reduce(max);
+    double minVal = sorted.first;
+    double maxVal = sorted.last;
     double range = maxVal - minVal;
     double median = sorted[sorted.length ~/ 2];
 
@@ -40,14 +40,14 @@ class EmotionPreprocessor {
       return features;
     }
   // 2. Fungsi Normalisasi (StandardScaler)
-  // static List<double> normalize(List<double> features, Map<String, dynamic> scaler) {
-  //   List<double> means = List<double>.from(scaler['mean']);
-  //   List<double> stds = List<double>.from(scaler['std']);
-  //   List<double> scaled = [];
+  static List<double> normalize(List<double> features, Map<String, dynamic> scaler) {
+    List<double> means = List<double>.from(scaler['mean']);
+    List<double> stds = List<double>.from(scaler['std']);
+    List<double> scaled = [];
 
-  //   for (int i = 0; i < features.length; i++) {
-  //     scaled.add((features[i] - means[i]) / stds[i]);
-  //   }
-  //   return scaled;
-  // }
+    for (int i = 0; i < features.length; i++) {
+      scaled.add((features[i] - means[i]) / stds[i]);
+    }
+    return scaled;
+  }
 }

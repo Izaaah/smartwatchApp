@@ -61,10 +61,9 @@ class MyBackgroundTaskHandler extends TaskHandler {
         print("Probabilitas - Normal (0): ${(probs[0] * 100).toStringAsFixed(2)}%");
         print("Probabilitas - STRES (1) : ${(probs[1] * 100).toStringAsFixed(2)}%");
         print("Probabilitas - Happy (2) : ${(probs[2] * 100).toStringAsFixed(2)}%");
-        // ---------------------------------------
 
         int label = _getMaxIndex(output[0]);
-        String status = (label == 1) ? "Stress" : "Normal";
+        String status = label == 1 ? "Stress" : label == 2 ? "Happy" : "Normal";
         
         if (status != _lastStatus) {
           print("🔄 Status Berubah: $_lastStatus -> $status");
@@ -90,12 +89,6 @@ class MyBackgroundTaskHandler extends TaskHandler {
           );
         sendPort?.send(status);
         }
-        // FlutterForegroundTask.updateService(
-        //   notificationTitle: status == "Stress" ? '⚠️ Terdeteksi Stres' : 'Kondisi Stabil ✅',
-        //   notificationText: status == "Stress" 
-        //     ? 'Tingkat stres tinggi (${(probs[1] * 100).toStringAsFixed(1)}%)' 
-        //     : 'Emosi terpantau normal.',
-        // );
 
       } catch (e) {
         print("Error saat prediksi: $e");

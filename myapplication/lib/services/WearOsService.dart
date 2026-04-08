@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'dart:convert';
 import 'package:watch_connectivity/watch_connectivity.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend/helper/EmotionPreprocessor.dart';
+// import 'package:frontend/helper/EmotionPreprocessor.dart';
 
 class WearOsService {
   static final WearOsService _instance = WearOsService._internal();
@@ -13,20 +13,32 @@ class WearOsService {
   final _watch = WatchConnectivity();
   final _sensorController = StreamController<Map<String, dynamic>>.broadcast();
   Stream<Map<String, dynamic>> get sensorStream => _sensorController.stream;
-
   StreamSubscription? _subscription;
+
+  // kumpulkan 6
   final List<double> _hrBuffer = [];
   final List<double> _accMagBuffer = [];
-  final int _windowSize = 60; // Sesuai WINDOW di training Python (60 detik)
-  List<double> _hrWindow = [];
-  List<double> _axWindow = [];
-  List<double> _ayWindow = [];
-  List<double> _azWindow = [];
+  final int _windowSize = 300; // Sesuai WINDOW di training Python (60 detik)
+  
+  DateTime? _lastDataTime;
   void initListener() {
     if (_subscription != null) return;
 
     _subscription = _watch.messageStream.listen((msg) async {
       if (msg is Map<String, dynamic>) {
+        final now = DateTime.now();
+
+        // Throttle
+        if (_lastDataTime != null &&
+            now.difference(_lastDataTime!).inMilliseconds < 200) {
+              double hr = (msg['hr'] as num?)?.toDouble() ?? 0.0;
+              double ax = (msg['ax'] as num?)?.toDouble() ?? 0.0;
+              double ay = (msg['ay'] as num?)?.toDouble() ?? 0.0;
+              double az = (msg['az'] as num?)?.toDouble() ?? 0.0;
+              _sensorController.add({'hr' : hr, 'ax' : ax, 'ay' : ay, 'az' : az});
+              return;
+            }
+            _lastDataTime = now;
         // 1. Ambil data sensor dari jam
         double hr = (msg['hr'] as num?)?.toDouble() ?? 0.0;
         double ax = (msg['ax'] as num?)?.toDouble() ?? 0.0;
@@ -36,42 +48,34 @@ class WearOsService {
         // 2. Hitung Magnitude Akselerometer (seperti di Python)
         double mag = math.sqrt(ax * ax + ay * ay + az * az);
 
-        _hrBuffer.add(hr);
-        _accMagBuffer.add(mag);
+        if (hr > 0) {
+          _hrBuffer.add(hr);
+          _accMagBuffer.add(mag);
+        }
 
-        // Jaga ukuran buffer agar tetap 60 (Sliding Window)
-        if (_hrBuffer.length > _windowSize) _hrBuffer.removeAt(0);
-        if (_accMagBuffer.length > _windowSize) _accMagBuffer.removeAt(0);
+        print("📊 Buffer: ${_hrBuffer.length}/$_windowSize (${(_hrBuffer.length/5).toStringAsFixed(0)}s / 60s)");
 
-        // 3. Jika Buffer sudah penuh (60 data), hitung 12 fitur untuk AI
-        if (_hrBuffer.length == _windowSize) {
+        if (_hrBuffer.length >= _windowSize) {
           List<double> hrStats = _calculateStats(_hrBuffer);
           List<double> accStats = _calculateStats(_accMagBuffer);
-          
-          // Gabungkan: 6 fitur HR + 6 fitur ACC = 12 Fitur
-          List<double> combinedFeatures = [...hrStats, ...accStats];
 
-          // 4. SIMPAN KE SHARED PREFERENCES (Agar bisa dibaca Background Task)
+          List<double> features = [...hrStats, ...accStats];
+          print("📦 12 fitur siap: $features");
+
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('latest_features', jsonEncode(combinedFeatures));
+          await prefs.setString('latest_features', jsonEncode(features));
+          print("✅ Features disimpan ke SharedPreferences");
 
-          // 5. Kirim ke Stream (Untuk update UI di Dashboard)
-          _sensorController.add({
-            'hr': hr,
-            'ax': ax,
-            'ay': ay,
-            'az': az,
-            'features': combinedFeatures, // Data untuk prediksi AI
-          });
-        } else {
-          // Jika belum 60 data, tetap kirim data mentah untuk UI saja
-          _sensorController.add({
-            'hr': hr,
-            'ax': ax,
-            'ay': ay,
-            'az': az,
-          });
+          _hrBuffer.clear();
+          _accMagBuffer.clear();
         }
+
+        _sensorController.add({
+          'hr' : hr,
+          'ax' : ax,
+          'ay' : ay,
+          'az' : az,
+        });
       }
     });
   }
@@ -105,5 +109,7 @@ class WearOsService {
   void dispose() {
     _subscription?.cancel();
     _subscription = null;
+    _hrBuffer.clear();
+    _accMagBuffer.clear();
   }
 }

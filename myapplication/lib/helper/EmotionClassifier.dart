@@ -17,18 +17,10 @@ class EmotionClassifier {
   String predict(List<double> hr, List<double> ax, List<double> ay, List<double> az) {
     if (_interpreter == null || _scaler == null) return "Model belum siap";
 
-    // 1. Ekstraksi 24 Fitur
-    List<double> rawFeatures = [];
-    rawFeatures.addAll(EmotionPreprocessor.calculateStats(hr));
-    rawFeatures.addAll(EmotionPreprocessor.calculateStats(ax));
-    rawFeatures.addAll(EmotionPreprocessor.calculateStats(ay));
-    rawFeatures.addAll(EmotionPreprocessor.calculateStats(az));
-
-    // 2. Normalisasi
+    // 1. Ekstraksi 12 Fitur
+    List<double> rawFeatures = EmotionPreprocessor.extractFeatures(hr,ax,ay,az);
     List<double> input = EmotionPreprocessor.normalize(rawFeatures, _scaler!);
 
-    // 3. Jalankan TFLite
-    // Input model adalah [1, 24], Output adalah [1, 3]
     var output = List.filled(3, 0.0).reshape([1, 3]);
     _interpreter!.run([input], output);
 
