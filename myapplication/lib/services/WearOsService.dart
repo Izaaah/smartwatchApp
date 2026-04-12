@@ -56,6 +56,9 @@ class WearOsService {
         print("📊 Buffer: ${_hrBuffer.length}/$_windowSize (${(_hrBuffer.length/5).toStringAsFixed(0)}s / 60s)");
 
         if (_hrBuffer.length >= _windowSize) {
+          print("🎯 window penuh! HR sample: ${_hrBuffer.take(5).toList()}");
+          print("🎯 ACC Mag sample: ${_accMagBuffer.take(5).toList()}");
+          
           List<double> hrStats = _calculateStats(_hrBuffer);
           List<double> accStats = _calculateStats(_accMagBuffer);
 
