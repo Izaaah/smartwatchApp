@@ -87,7 +87,14 @@ class MyBackgroundTaskHandler extends TaskHandler {
             notificationTitle: notifTitle,
             notificationText: notifText,
           );
-        sendPort?.send(status);
+        sendPort?.send({
+          'status': status,
+          'probs': {
+            'normal': (probs[0] * 100).toStringAsFixed(1),
+            'stress': (probs[1] * 100).toStringAsFixed(2),
+            'happy': (probs[2] * 100).toStringAsFixed(2),
+          }
+        });
         }
 
       } catch (e) {
