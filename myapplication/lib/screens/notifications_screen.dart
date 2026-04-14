@@ -74,9 +74,9 @@ Future<void> _saveToStorage() async {
   }
 
   // Di dalam class _NotificationsScreenState
-void onNewPrediction(String label) {
+void onNewPrediction(String label, {Map<String, String>? probs}) {
   // 1. Buat objek notifikasi dari hasil AI
-  final newNotif = EmotionNotificationHandler.createNotificationFromAI(label);
+  final newNotif = EmotionNotificationHandler.createNotificationFromAI(label, probs: probs);
 
   // 2. Update tampilan secara real-time
   setState(() {
