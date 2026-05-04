@@ -45,8 +45,13 @@ class WearOsService {
         double ay = (msg['ay'] as num?)?.toDouble() ?? 0.0;
         double az = (msg['az'] as num?)?.toDouble() ?? 0.0;
 
+        // Konversi akselerometer dari m/s^2 (WearOS) ke 1/64g (dataset WESAD/Empatica E4)
+        double ax_wesad = (ax / 9.80665) * 64.0;
+        double ay_wesad = (ay / 9.80665) * 64.0;
+        double az_wesad = (az / 9.80665) * 64.0;
+
         // 2. Hitung Magnitude Akselerometer (seperti di Python)
-        double mag = math.sqrt(ax * ax + ay * ay + az * az);
+        double mag = math.sqrt(ax_wesad * ax_wesad + ay_wesad * ay_wesad + az_wesad * az_wesad);
 
         if (hr > 0) {
           _hrBuffer.add(hr);

@@ -69,32 +69,61 @@ class MyBackgroundTaskHandler extends TaskHandler {
           print("🔄 Status Berubah: $_lastStatus -> $status");
           _lastStatus = status;
 
+          final String normalPct = (probs[0] * 100).toStringAsFixed(1);
+          final String stressPct = (probs[1] * 100).toStringAsFixed(1);
+          final String happyPct  = (probs[2] * 100).toStringAsFixed(1);
+          final String probStr   = 'Normal: $normalPct% | Stres: $stressPct% | Happy: $happyPct%';
+
           String notifTitle;
           String notifText;
+          String notifType;
 
           if (status == "Stress") {
-            notifTitle = '⚠️ Terdeteksi Stres';
-            notifText = 'Tingkat stes tinggi (${(probs[1] * 100).toStringAsFixed(1)}%). Coba istirahat sejenak.';
+            notifTitle = '⚠️ Peringatan Stres Terdeteksi!';
+            notifText  = 'Detak jantung menunjukkan indikasi stres tinggi. Yuk, istirahat sejenak.\n$probStr';
+            notifType  = 'alert';
           } else if (status == "Happy") {
-            notifTitle = 'Mood Anda Baik!';
-            notifText = 'Kondisi emosi terpantau positif.';
+            notifTitle = 'Mood Anda Sangat Baik! 🎉';
+            notifText  = 'Kondisi emosi terpantau positif. Pertahankan energi ini!\n$probStr';
+            notifType  = 'achievement';
           } else {
-            notifTitle = 'Kondisi Stabil';
-            notifText = 'Emosi terpantau normal.';
+            notifTitle = 'Kondisi Tubuh Stabil';
+            notifText  = 'Status emosi terpantau normal.\n$probStr';
+            notifType  = 'health';
           }
 
+          // ✅ Update foreground notification bar
           FlutterForegroundTask.updateService(
             notificationTitle: notifTitle,
             notificationText: notifText,
           );
-        sendPort?.send({
-          'status': status,
-          'probs': {
-            'normal': (probs[0] * 100).toStringAsFixed(1),
-            'stress': (probs[1] * 100).toStringAsFixed(2),
-            'happy': (probs[2] * 100).toStringAsFixed(2),
-          }
-        });
+
+          // ✅ Simpan langsung ke SharedPreferences (lebih andal dari sendPort)
+          final prefs2 = await SharedPreferences.getInstance();
+          final newNotif = {
+            'id': DateTime.now().millisecondsSinceEpoch,
+            'title': notifTitle,
+            'message': notifText,
+            'type': notifType,
+            'timestamp': DateTime.now().toIso8601String(),
+            'is_read': false,
+          };
+          final String? savedData = prefs2.getString('saved_notifications');
+          List<dynamic> existingList = savedData != null ? jsonDecode(savedData) : [];
+          existingList.insert(0, newNotif);
+          if (existingList.length > 50) existingList = existingList.sublist(0, 50);
+          await prefs2.setString('saved_notifications', jsonEncode(existingList));
+          print("✅ Notifikasi tersimpan ke SharedPrefs: $notifTitle");
+
+          // ✅ Kirim juga via sendPort untuk update real-time di UI
+          sendPort?.send({
+            'status': status,
+            'probs': {
+              'normal': normalPct,
+              'stress': stressPct,
+              'happy': happyPct,
+            }
+          });
         }
 
       } catch (e) {

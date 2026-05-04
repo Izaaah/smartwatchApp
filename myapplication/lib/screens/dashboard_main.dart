@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/screens/profile.dart';
@@ -206,7 +207,72 @@ Future<void> _startForegroundService() async {
       callback: startCallback,
     );
   }
+  FlutterForegroundTask.receivePort?.listen((data) {
+    if (data is Map) {
+      String status = data['status'];
+      Map probs = data['probs'];
+      print("🟡 Status: $status, Probabilitas: $probs");
+
+      SharedPreferences.getInstance().then((p) async {
+        p.setString('last_ai_status', status);
+        p.setString('last_ai_probs', jsonEncode(probs));
+
+        // ✅ Simpan sebagai notifikasi ke saved_notifications agar muncul di NotificationsScreen
+        final String probText =
+            'Normal: ${probs['normal']}% | Stres: ${probs['stress']}% | Happy: ${probs['happy']}%';
+
+        String notifTitle;
+        String notifMessage;
+        String notifType;
+
+        if (status == 'Stress') {
+          notifTitle = '⚠️ Peringatan Stres Terdeteksi!';
+          notifMessage =
+              'Detak jantung menunjukkan indikasi stres tinggi. Yuk, istirahat sejenak.\n$probText';
+          notifType = 'alert';
+        } else if (status == 'Happy') {
+          notifTitle = 'Mood Anda Sangat Baik! 🎉';
+          notifMessage =
+              'Kondisi emosi terpantau positif. Pertahankan energi ini!\n$probText';
+          notifType = 'achievement';
+        } else {
+          notifTitle = 'Kondisi Tubuh Stabil';
+          notifMessage = 'Status emosi terpantau normal.\n$probText';
+          notifType = 'health';
+        }
+
+        final newNotif = {
+          'id': DateTime.now().millisecondsSinceEpoch,
+          'title': notifTitle,
+          'message': notifMessage,
+          'type': notifType,
+          'timestamp': DateTime.now().toIso8601String(),
+          'is_read': false,
+        };
+
+        // Ambil list lama, tambahkan notif baru di depan
+        final String? savedData = p.getString('saved_notifications');
+        List<dynamic> existingList = [];
+        if (savedData != null) {
+          existingList = jsonDecode(savedData);
+        }
+        existingList.insert(0, newNotif);
+        // Batasi maksimal 50 notifikasi
+        if (existingList.length > 50) {
+          existingList = existingList.sublist(0, 50);
+        }
+        await p.setString('saved_notifications', jsonEncode(existingList));
+        print("✅ Notifikasi disimpan: $notifTitle");
+      });
+
+      if (status == "Stress" && mounted) {
+        _showStressDialog(status);
+      }
+    }
+  });
 }
+
+
 void _saveToFirebase(HealthData data) async {
   if (user != null) {
     try {
@@ -944,7 +1010,7 @@ Widget _buildHeartRateCard() {
           const SizedBox(height: 16),
           _buildProgressItem(
             'Water',
-            (waterIntake * 1000).toInt(),
+            (waterIntake * 1).toInt(),
             2,
             Colors.lightBlue,
             displayValue: '${waterIntake.toStringAsFixed(1)}L / 2L',

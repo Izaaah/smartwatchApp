@@ -83,7 +83,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 40),
             const Text(
-              '© 2024 Smart Watch App',
+              '© 2025 Rely App',
               style: TextStyle(
                 color: Colors.white54,
                 fontSize: 12,

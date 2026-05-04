@@ -849,85 +849,120 @@ void _showMeditationDialog(BuildContext context){
 
   Future<void> _saveActivityToFirestore(String title, String details, IconData icon) async {
     try {
+      final String? userId = FirebaseAuth.instance.currentUser?.uid;
+      final now = DateTime.now();
       await FirebaseFirestore.instance.collection('recent_activities').add({
+        'userId': userId,
         'title': title,
-        'time': DateTime.now(),
+        'time': Timestamp.fromDate(now),
         'details': details,
         'icon_code': icon.codePoint,
-        'timestamp': FieldValue.serverTimestamp(),
+        // Gunakan millis agar orderBy tidak null saat snapshot pertama
+        'createdAtMillis': now.millisecondsSinceEpoch,
       });
+      print('✅ Aktivitas disimpan: $title');
     } catch (e) {
       print("Error saving activity: $e");
     }
   }
   Widget _buildTodayActivities() {
+    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+
+    // Batas awal dan akhir hari ini
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Recent Activities Today',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Recent Activities Today',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              DateFormat('d MMM yyyy').format(now),
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.4),
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-            .collection('recent_activities')
-            .orderBy('timestamp', descending: true)
-            .limit(5)
-            .snapshots(),
+          stream: userId == null
+              ? const Stream.empty()
+              : FirebaseFirestore.instance
+                  .collection('recent_activities')
+                  .where('userId', isEqualTo: userId)
+                  .where('createdAtMillis',
+                      isGreaterThanOrEqualTo: startOfDay.millisecondsSinceEpoch)
+                  .where('createdAtMillis',
+                      isLessThan: endOfDay.millisecondsSinceEpoch)
+                  .orderBy('createdAtMillis', descending: true)
+                  .limit(10)
+                  .snapshots(),
           builder: (context, snapshot) {
-            print("📋 recent_activities snapshot: ${snapshot.connectionState}");
-            print("📋 hasData: ${snapshot.hasData}");
-            print("📋 error: ${snapshot.error}");
-
-            if (snapshot.hasData) {
-              print("📋 docs count: ${snapshot.data!.docs.length}");
-            }
-
             if (snapshot.hasError) {
-              return Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.red));
+              print('❌ Recent activities error: ${snapshot.error}');
+              return _buildEmptyActivities('Gagal memuat aktivitas');
             }
 
-            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-
-            if (snapshot.data!.docs.isEmpty) {
-              return const Center(
-                child: Text('Belum ada aktivitas hari ini', 
-                  style: TextStyle(color: Colors.white54)),
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator()),
               );
             }
 
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return _buildEmptyActivities('Belum ada aktivitas hari ini');
+            }
+
+            final docs = snapshot.data!.docs;
+            print('✅ recent_activities: ${docs.length} item ditemukan');
+
             return ListView.separated(
-              shrinkWrap: true, 
-              physics: const NeverScrollableScrollPhysics(), 
-              itemCount: snapshot.data!.docs.length,
-              separatorBuilder: (context, index) => SizedBox(height: 12),
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: docs.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                var data = snapshot.data!.docs[index];
+                final data = docs[index].data() as Map<String, dynamic>;
 
                 Color activityColor;
-                if (data['title'].contains('Breathing')){
+                final title = data['title'] as String? ?? '';
+                if (title.contains('Breathing')) {
                   activityColor = const Color(0xFF4ECDC4);
-                } else if (data['title'].contains('Meditation')) {
+                } else if (title.contains('Meditation')) {
                   activityColor = const Color(0xFFFFD93D);
-                } else if (data['title'].contains('Focus')){
+                } else if (title.contains('Focus')) {
                   activityColor = const Color(0xFF6C5CE7);
                 } else {
                   activityColor = const Color(0xFFF39C12);
                 }
+
+                final timeDisplay = data['time'] != null
+                    ? DateFormat('h:mm a')
+                        .format((data['time'] as Timestamp).toDate())
+                    : '-';
+
                 return _buildActivityItem(
-                  data['title'],
-                  DateFormat('h:mm a').format(
-                    data['time'] != null
-                    ? (data['time'] as Timestamp).toDate()
-                    : DateTime.now()
+                  title,
+                  timeDisplay,
+                  data['details'] as String? ?? '',
+                  IconData(
+                    data['icon_code'] as int? ?? Icons.fitness_center.codePoint,
+                    fontFamily: 'MaterialIcons',
                   ),
-                  data['details'],
-                  IconData(data['icon_code'], fontFamily: 'MaterialIcons'),
                   activityColor,
                 );
               },
@@ -935,6 +970,34 @@ void _showMeditationDialog(BuildContext context){
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildEmptyActivities(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1F3A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.fitness_center_outlined,
+              size: 40, color: Colors.white.withOpacity(0.2)),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Coba salah satu aktivitas di atas!',
+            style: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 12),
+          ),
+        ],
+      ),
     );
   }
 
