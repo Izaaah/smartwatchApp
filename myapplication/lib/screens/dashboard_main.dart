@@ -18,6 +18,9 @@ import 'dart:math' as math;
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:frontend/helper/background_task_handler.dart';
 
+// Global callback untuk menampilkan stress banner dari DashboardContent
+typedef StressBannerCallback = void Function(String stressLevel, Map probs);
+
 class DashboardMain extends StatefulWidget {
   const DashboardMain({super.key});
 
@@ -25,9 +28,17 @@ class DashboardMain extends StatefulWidget {
   State<DashboardMain> createState() => _DashboardMainState();
 }
 
-class _DashboardMainState extends State<DashboardMain> {
+class _DashboardMainState extends State<DashboardMain> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
-  
+  bool _showStressBanner = false;
+  String _stressBannerLevel = 'Stress';
+  Map _stressBannerProbs = {};
+  Timer? _bannerTimer;
+
+  late AnimationController _bannerAnimController;
+  late Animation<Offset> _bannerSlideAnim;
+  late Animation<double> _bannerFadeAnim;
+
   final GlobalKey<_DashboardContentState> _dashboardKey =
       GlobalKey<_DashboardContentState>();
   late List<Widget> _screens;
@@ -35,21 +46,319 @@ class _DashboardMainState extends State<DashboardMain> {
   @override
   void initState() {
     super.initState();
+
+    _bannerAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _bannerSlideAnim = Tween<Offset>(
+      begin: const Offset(0, -1.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _bannerAnimController,
+      curve: Curves.easeOutBack,
+    ));
+    _bannerFadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _bannerAnimController, curve: Curves.easeIn),
+    );
+
     _screens = [
-      DashboardContent(key: _dashboardKey),
+      DashboardContent(
+        key: _dashboardKey,
+        onStressDetected: _triggerStressBanner,
+      ),
       const ActivityScreen(),
       const ProfileScreen(),
     ];
   }
 
   @override
+  void dispose() {
+    _bannerAnimController.dispose();
+    _bannerTimer?.cancel();
+    super.dispose();
+  }
+
+  void _triggerStressBanner(String level, Map probs) {
+    if (!mounted) return;
+    _bannerTimer?.cancel();
+    setState(() {
+      _stressBannerLevel = level;
+      _stressBannerProbs = probs;
+      _showStressBanner = true;
+    });
+    _bannerAnimController.forward(from: 0);
+    // Auto dismiss setelah 8 detik
+    _bannerTimer = Timer(const Duration(seconds: 8), () {
+      _dismissBanner();
+    });
+  }
+
+  void _dismissBanner() {
+    if (!mounted) return;
+    _bannerAnimController.reverse().then((_) {
+      if (mounted) {
+        setState(() => _showStressBanner = false);
+      }
+    });
+    _bannerTimer?.cancel();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
+      body: Stack(
+        children: [
+          IndexedStack(
+            index: _selectedIndex,
+            children: _screens,
+          ),
+          // ── Stress Banner Overlay ──
+          if (_showStressBanner)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: _buildStressBanner(),
+            ),
+        ],
       ),
       bottomNavigationBar: _buildBottomNavBar(),
+    );
+  }
+
+  Widget _buildStressBanner() {
+    final String stressVal =
+        _stressBannerProbs['stress']?.toString() ?? '--';
+    final String normalVal =
+        _stressBannerProbs['normal']?.toString() ?? '--';
+    final String happyVal =
+        _stressBannerProbs['happy']?.toString() ?? '--';
+
+    return SlideTransition(
+      position: _bannerSlideAnim,
+      child: FadeTransition(
+        opacity: _bannerFadeAnim,
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF8B0000),
+                      Color(0xFFCC2200),
+                      Color(0xFFFF4422),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF4422).withOpacity(0.5),
+                      blurRadius: 24,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Baris 1: Ikon + Judul + Tombol Tutup ──
+                      Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.18),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '⚠️ Stres Terdeteksi!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'AI mendeteksi tingkat stres tinggi pada Anda',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _dismissBanner,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // ── Baris 2: Probabilitas ──
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildProbChip(
+                                '😰 Stres', '$stressVal%', true),
+                            _buildProbDivider(),
+                            _buildProbChip(
+                                '😌 Normal', '$normalVal%', false),
+                            _buildProbDivider(),
+                            _buildProbChip(
+                                '😊 Happy', '$happyVal%', false),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // ── Baris 3: Tombol Aksi ──
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: _dismissBanner,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius:
+                                      BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.3),
+                                  ),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    'Nanti Saja',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                _dismissBanner();
+                                // TODO: Navigasi ke halaman relaksasi/pernapasan
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius:
+                                      BorderRadius.circular(12),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    '🧘 Mulai Relaksasi',
+                                    style: TextStyle(
+                                      color: Color(0xFFCC2200),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProbChip(String label, String value, bool isHighlight) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: isHighlight ? Colors.yellowAccent : Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.75),
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProbDivider() {
+    return Container(
+      width: 1,
+      height: 30,
+      color: Colors.white.withOpacity(0.25),
     );
   }
 
@@ -96,7 +405,8 @@ class _DashboardMainState extends State<DashboardMain> {
 }
 
 class DashboardContent extends StatefulWidget {
-  const DashboardContent({super.key});
+  final StressBannerCallback? onStressDetected;
+  const DashboardContent({super.key, this.onStressDetected});
 
   @override
   State<DashboardContent> createState() => _DashboardContentState();
@@ -266,7 +576,8 @@ Future<void> _startForegroundService() async {
       });
 
       if (status == "Stress" && mounted) {
-        _showStressDialog(status);
+        // Trigger banner di parent (DashboardMain)
+        widget.onStressDetected?.call(status, probs);
       }
     }
   });
@@ -363,6 +674,7 @@ Future<void> _handlePermissions() async {
     Permission.location,
     Permission.activityRecognition, 
     Permission.sensors,
+    Permission.notification, // Wajib di Android 13+ untuk custom text foreground service
   ].request();
   
   print("Permission Status: $statuses");
@@ -617,43 +929,7 @@ StreamBuilder(
     );
   }
 
-void _showStressDialog(String label) {
-  showDialog(
-    context: context,
-    barrierDismissible: false, // User harus berinteraksi
-    builder: (BuildContext context) {
-      return AlertDialog(
-        backgroundColor: const Color(0xFF1A1F3A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 30),
-            SizedBox(width: 10),
-            Text("Peringatan Stres", style: TextStyle(color: Colors.white)),
-          ],
-        ),
-        content: Text(
-          "Model AI kami mendeteksi tingkat stres yang tinggi pada Anda. Ingin melakukan latihan pernapasan sekarang?",
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Nanti Saja", style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () {
-              Navigator.pop(context);
-              // Arahkan ke fitur relaksasi/napas
-            },
-            child: Text("Mulai Relaksasi"),
-          ),
-        ],
-      );
-    },
-  );
-}
+// Dialog lama dihapus — stress alert kini ditangani oleh _StressBannerOverlay di DashboardMain
   void _showAddWaterDialog(BuildContext context) {
   final TextEditingController waterController = TextEditingController();
   final String? uid = FirebaseAuth.instance.currentUser?.uid;

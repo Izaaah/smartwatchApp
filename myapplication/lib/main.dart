@@ -21,8 +21,9 @@ void _initForegroundTask() {
       id: 888,
       channelId: 'stress_monitor',
       channelName: 'Stress Monitor',
-      channelImportance: NotificationChannelImportance.HIGH,
-      priority: NotificationPriority.HIGH,
+      channelImportance: NotificationChannelImportance.MAX, // Ubah ke MAX agar tampil di atas
+      priority: NotificationPriority.MAX,
+      isSticky: true, // Membuat notifikasi tidak bisa di-swipe/dihapus (persistent)
       iconData: const NotificationIconData(
         resType: ResourceType.mipmap,
         resPrefix:ResourcePrefix.ic,
