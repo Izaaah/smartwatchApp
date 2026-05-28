@@ -58,9 +58,9 @@ class MyBackgroundTaskHandler extends TaskHandler {
         List<double> probs = List<double>.from(output[0]);
         print("---------------------------------------");
         print("AI ANALISIS:");
-        print("Probabilitas - Normal (0): ${(probs[0] * 100).toStringAsFixed(2)}%");
+        print("Probabilitas - Normal - Baseline (0): ${(probs[0] * 100).toStringAsFixed(2)}%");
         print("Probabilitas - STRES (1) : ${(probs[1] * 100).toStringAsFixed(2)}%");
-        print("Probabilitas - Happy (2) : ${(probs[2] * 100).toStringAsFixed(2)}%");
+        print("Probabilitas - Happy - Amusement (2) : ${(probs[2] * 100).toStringAsFixed(2)}%");
 
         int label = _getMaxIndex(output[0]);
         String status = label == 1 ? "Stress" : label == 2 ? "Happy" : "Normal";

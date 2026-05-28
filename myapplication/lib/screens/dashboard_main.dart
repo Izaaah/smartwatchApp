@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/screens/profile.dart';
+import 'package:frontend/screens/stats.dart';
 import 'package:frontend/screens/activity.dart';
 import 'package:frontend/screens/notifications_screen.dart';
 import 'package:frontend/models/health_data.dart';
@@ -69,6 +70,7 @@ class _DashboardMainState extends State<DashboardMain> with SingleTickerProvider
       ),
       const ActivityScreen(),
       const ProfileScreen(),
+      const StatsScreen(),
     ];
   }
 
@@ -389,6 +391,10 @@ class _DashboardMainState extends State<DashboardMain> with SingleTickerProvider
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.show_chart),
+            label: 'Stats',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.fitness_center),
