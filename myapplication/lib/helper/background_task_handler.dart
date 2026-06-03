@@ -44,11 +44,20 @@ class MyBackgroundTaskHandler extends TaskHandler {
           print("⚠️ Jumlah fitur tidak valid: ${rawInput.length}, expected 12");
           return;
         }
+        
+        // if (rawInput.length != 13) {
+        //   print("⚠️ Jumlah fitur tidak valid: ${rawInput.length}, expected 12");
+        //   return;
+        // }
         // 1. Normalisasi
         List<double> inputScaled = [];
         for (int i = 0; i < 12; i++) {
           inputScaled.add((rawInput[i] - _mean![i]) / _std![i]);
         }
+        // List<double> inputScaled = [];
+        // for (int i = 0; i < 13; i++) {
+        //   inputScaled.add((rawInput[i] - _mean![i]) / _std![i]);
+        // }
 
         // 2. Prediksi
         var output = List.filled(1 * 3, 0.0).reshape([1, 3]);

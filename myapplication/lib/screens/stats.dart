@@ -477,7 +477,7 @@ class StatsScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
-                  '78% Complete',
+                  '78% ',
                   style: TextStyle(
                     color: Color(0xFF4ECDC4),
                     fontSize: 12,

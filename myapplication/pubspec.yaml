@@ -50,3 +50,5 @@ flutter:
     - assets/model_emotion_lite.tflite
     - assets/scaler_params.json
     - assets/audio/meditation.mp3
+    - assets/model_emotion_lite(4).tflite
+    - assets/scaler_params(4).json

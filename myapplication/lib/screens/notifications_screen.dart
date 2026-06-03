@@ -21,7 +21,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     super.initState();
     _loadNotifications();
     // Auto-refresh setiap 5 detik untuk membaca data baru dari background task
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    // _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       if (mounted) _loadNotificationsSilent();
     });
   }
@@ -35,7 +36,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   /// Refresh tanpa menampilkan loading spinner
   Future<void> _loadNotificationsSilent() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.reload(); // Paksa baca ulang dari disk (penting untuk cross-isolate)
+    await prefs
+        .reload(); // Paksa baca ulang dari disk (penting untuk cross-isolate)
     final String? savedData = prefs.getString('saved_notifications');
     if (savedData != null && mounted) {
       final List<dynamic> decodedData = jsonDecode(savedData);
@@ -90,7 +92,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   void _markAllAsRead() {
     setState(() {
-      _notifications = _notifications.map((n) => n.copyWith(isRead: true)).toList();
+      _notifications =
+          _notifications.map((n) => n.copyWith(isRead: true)).toList();
     });
     _saveToStorage();
   }
@@ -111,9 +114,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   /// Returns {normal, stress, happy} as double 0..100, or null if not found
   Map<String, double>? _parseProbabilities(String message) {
     try {
-      final RegExp normalRx = RegExp(r'Normal:\s*([\d.]+)%');
+      final RegExp normalRx = RegExp(r'Baseline:\s*([\d.]+)%');
       final RegExp stressRx = RegExp(r'Stres:\s*([\d.]+)%');
-      final RegExp happyRx  = RegExp(r'Happy:\s*([\d.]+)%');
+      final RegExp happyRx = RegExp(r'Amusement:\s*([\d.]+)%');
 
       final nMatch = normalRx.firstMatch(message);
       final sMatch = stressRx.firstMatch(message);
@@ -124,7 +127,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       return {
         'normal': double.parse(nMatch.group(1)!),
         'stress': double.parse(sMatch.group(1)!),
-        'happy':  double.parse(hMatch.group(1)!),
+        'happy': double.parse(hMatch.group(1)!),
       };
     } catch (_) {
       return null;
@@ -133,9 +136,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   /// Pesan tanpa baris probabilitas
   String _stripProbLine(String message) {
-    return message
-        .replaceAll(RegExp(r'\nNormal:.*'), '')
-        .trim();
+    return message.replaceAll(RegExp(r'\nBaseline:.*'), '').trim();
   }
 
   @override
@@ -208,17 +209,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.notifications_none, size: 72, color: Colors.white.withOpacity(0.2)),
+          Icon(Icons.notifications_none,
+              size: 72, color: Colors.white.withOpacity(0.2)),
           const SizedBox(height: 16),
           Text(
             'Belum ada notifikasi',
-            style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 18),
+            style:
+                TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 18),
           ),
           const SizedBox(height: 8),
           Text(
             'Notifikasi hasil analisis AI\nakan muncul di sini',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14),
+            style:
+                TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14),
           ),
         ],
       ),
@@ -228,7 +232,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   // ─── Card ────────────────────────────────────────────────────────────────
   Widget _buildNotificationCard(app_models.Notification notification) {
     final bool isStress = notification.type == 'alert';
-    final icon  = _getIcon(notification.type);
+    final icon = _getIcon(notification.type);
     final color = _getColor(notification.type);
     final probs = _parseProbabilities(notification.message);
     final mainMessage = _stripProbLine(notification.message);
@@ -302,7 +306,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 child: Text(
                                   notification.title,
                                   style: TextStyle(
-                                    color: isStress ? Colors.red.shade200 : Colors.white,
+                                    color: isStress
+                                        ? Colors.red.shade200
+                                        : Colors.white,
                                     fontSize: 15,
                                     fontWeight: notification.isRead
                                         ? FontWeight.w500
@@ -315,7 +321,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   width: 8,
                                   height: 8,
                                   decoration: BoxDecoration(
-                                    color: isStress ? Colors.red : const Color(0xFF4ECDC4),
+                                    color: isStress
+                                        ? Colors.red
+                                        : const Color(0xFF4ECDC4),
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -367,7 +375,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 14),
+          const Icon(Icons.warning_amber_rounded,
+              color: Colors.orangeAccent, size: 14),
           const SizedBox(width: 6),
           Text(
             'PERINGATAN STRES TERDETEKSI',
@@ -405,7 +414,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           const SizedBox(height: 8),
           _buildSingleBar(
-            label: 'Normal',
+            label: 'Baseline',
             value: probs['normal'] ?? 0,
             color: const Color(0xFF4ECDC4),
           ),
@@ -417,7 +426,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           const SizedBox(height: 5),
           _buildSingleBar(
-            label: 'Happy',
+            label: 'Amusement',
             value: probs['happy'] ?? 0,
             color: Colors.amber,
           ),
@@ -475,21 +484,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   // ─── Helpers ──────────────────────────────────────────────────────────────
   IconData _getIcon(String type) {
     switch (type) {
-      case 'alert':       return Icons.warning_amber_rounded;
-      case 'achievement': return Icons.emoji_events;
-      case 'reminder':    return Icons.alarm;
-      case 'health':      return Icons.favorite_outline;
-      default:            return Icons.notifications_outlined;
+      case 'alert':
+        return Icons.warning_amber_rounded;
+      case 'achievement':
+        return Icons.emoji_events;
+      case 'reminder':
+        return Icons.alarm;
+      case 'health':
+        return Icons.favorite_outline;
+      default:
+        return Icons.notifications_outlined;
     }
   }
 
   Color _getColor(String type) {
     switch (type) {
-      case 'alert':       return Colors.red;
-      case 'achievement': return Colors.amber;
-      case 'reminder':    return Colors.blue;
-      case 'health':      return const Color(0xFF4ECDC4);
-      default:            return const Color(0xFF4ECDC4);
+      case 'alert':
+        return Colors.red;
+      case 'achievement':
+        return Colors.amber;
+      case 'reminder':
+        return Colors.blue;
+      case 'health':
+        return const Color(0xFF4ECDC4);
+      default:
+        return const Color(0xFF4ECDC4);
     }
   }
 
@@ -497,12 +516,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final now = DateTime.now();
     final diff = now.difference(dateTime);
 
-    if (diff.inSeconds < 60)       return 'Baru saja';
-    if (diff.inMinutes < 60)       return '${diff.inMinutes}m yang lalu';
-    if (diff.inHours < 24)         return '${diff.inHours}j yang lalu';
-    if (diff.inDays < 7)           return '${diff.inDays}h yang lalu';
+    if (diff.inSeconds < 60) return 'Baru saja';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m yang lalu';
+    if (diff.inHours < 24) return '${diff.inHours}j yang lalu';
+    if (diff.inDays < 7) return '${diff.inDays}h yang lalu';
 
-    final months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des'
+    ];
     return '${months[dateTime.month - 1]} ${dateTime.day}, ${dateTime.year}';
   }
 }
