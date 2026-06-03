@@ -14,10 +14,10 @@ class WearOsService {
   Stream<Map<String, dynamic>> get sensorStream => _sensorController.stream;
   StreamSubscription? _subscription;
 
-  final List<double> _hrBuffer    = [];
-  final List<double> _axBuffer    = []; // ✅ Simpan ax, ay, az terpisah
-  final List<double> _ayBuffer    = [];
-  final List<double> _azBuffer    = [];
+  final List<double> _hrBuffer = [];
+  final List<double> _axBuffer = []; // ✅ Simpan ax, ay, az terpisah
+  final List<double> _ayBuffer = [];
+  final List<double> _azBuffer = [];
   final int _windowSize = 300;
 
   DateTime? _lastDataTime;
@@ -57,21 +57,23 @@ class WearOsService {
           _azBuffer.add(az_wesad);
         }
 
-        print("📊 Buffer: ${_hrBuffer.length}/$_windowSize (${(_hrBuffer.length / 5).toStringAsFixed(0)}s / 60s)");
+        print(
+            "📊 Buffer: ${_hrBuffer.length}/$_windowSize (${(_hrBuffer.length / 5).toStringAsFixed(0)}s / 60s)");
 
         if (_hrBuffer.length >= _windowSize) {
           print("🎯 window penuh! HR sample: ${_hrBuffer.take(5).toList()}");
 
           // ✅ Hitung 13 fitur
-          List<double> hrStats  = _calculateStats(_hrBuffer);         // 6 fitur
-          double rmssd          = _calculateRmssd(_hrBuffer);          // 1 fitur ✅
-          List<double> accMag   = _calculateAccMagnitude(_axBuffer, _ayBuffer, _azBuffer);
-          List<double> accStats = _calculateStats(accMag);            // 6 fitur
+          List<double> hrStats = _calculateStats(_hrBuffer); // 6 fitur
+          double rmssd = _calculateRmssd(_hrBuffer); // 1 fitur ✅
+          List<double> accMag =
+              _calculateAccMagnitude(_axBuffer, _ayBuffer, _azBuffer);
+          List<double> accStats = _calculateStats(accMag); // 6 fitur
 
           List<double> features = [
-            ...hrStats,   // index 0-5
-            rmssd,        // index 6  ✅
-            ...accStats,  // index 7-12
+            ...hrStats, // index 0-5
+            rmssd, // index 6  ✅
+            ...accStats, // index 7-12
           ];
 
           print("📦 13 fitur siap: $features");
@@ -97,11 +99,12 @@ class WearOsService {
     if (data.isEmpty) return List.filled(6, 0.0);
 
     double mean = data.reduce((a, b) => a + b) / data.length;
-    double sumSquaredDiff = data.map((x) => (x - mean) * (x - mean)).reduce((a, b) => a + b);
-    double std    = math.sqrt(sumSquaredDiff / data.length);
-    double min    = data.reduce(math.min);
-    double max    = data.reduce(math.max);
-    double range  = max - min;
+    double sumSquaredDiff =
+        data.map((x) => (x - mean) * (x - mean)).reduce((a, b) => a + b);
+    double std = math.sqrt(sumSquaredDiff / data.length);
+    double min = data.reduce(math.min);
+    double max = data.reduce(math.max);
+    double range = max - min;
     List<double> sorted = List.from(data)..sort();
     double median = sorted[sorted.length ~/ 2];
 
@@ -120,7 +123,8 @@ class WearOsService {
       diffs.add(ibi[i] - ibi[i - 1]);
     }
 
-    double meanSquared = diffs.map((d) => d * d).reduce((a, b) => a + b) / diffs.length;
+    double meanSquared =
+        diffs.map((d) => d * d).reduce((a, b) => a + b) / diffs.length;
     return math.sqrt(meanSquared);
   }
 
